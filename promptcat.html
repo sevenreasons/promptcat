@@ -106,7 +106,7 @@
 
         /* --- Main Content --- */
         #main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-        #sidebar-toggle, #mobile-new-prompt-fab, #close-details-btn {
+        #sidebar-toggle, #mobile-new-prompt-fab, #close-details-btn, #mobile-search-btn {
             display: none; position: absolute; z-index: 1001;
             background: var(--bg-surface); border: 1px solid var(--border-color);
             color: var(--text-primary); cursor: pointer; border-radius: 12px;
@@ -116,6 +116,12 @@
         }
         #sidebar-toggle { bottom: 20px; left: 20px; }
         #mobile-new-prompt-fab { bottom: 20px; right: 20px; }
+        #mobile-search-btn {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #mobile-search-btn svg { width: 20px; height: 20px; }
         
         .sidebar-overlay {
             position: fixed; top: 0; left: 0;
@@ -133,7 +139,7 @@
 
         #app.sidebar-is-open #sidebar-toggle { opacity: 0; pointer-events: none; }
 
-        #prompt-list-container { width: 35%; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
+        #prompt-list-container { width: 35%; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .prompt-list-controls {
             padding: 10px 15px; display: flex; gap: 10px; align-items: center;
             border-bottom: 1px solid var(--border-color); flex-shrink: 0;
@@ -300,13 +306,49 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         #confirm-reset-btn, .modal-confirm-btn.danger { background-color: var(--red-accent); color: white; }
         #confirm-reset-btn:hover, .modal-confirm-btn.danger:hover { background-color: var(--red-hover); }
-
+        
         /* --- Mobile --- */
+        #mobile-search-bar { display: none; }
         #close-details-btn {
             bottom: 20px;
             right: 20px;
         }
         @media (max-width: 768px) {
+            #sidebar-header { display: none; }
+            #mobile-search-bar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 10;
+                background-color: var(--bg-deep-space);
+                padding: 10px 15px;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                transform: translateY(-100%);
+                transition: transform 0.3s ease;
+                border-bottom: 1px solid var(--border-color);
+            }
+            #mobile-search-bar.visible {
+                transform: translateY(0);
+            }
+            #mobile-search-input {
+                width: 100%;
+                height: 44px;
+            }
+            #close-search-btn {
+                background: var(--bg-surface);
+                border: 1px solid var(--border-color);
+                color: var(--text-primary);
+                cursor: pointer;
+                border-radius: 12px;
+                width: 44px;
+                height: 44px;
+                font-size: 22px;
+                flex-shrink: 0;
+            }
+
             #app { overflow-x: hidden; }
             #sidebar { position: absolute; left: 0; top: 0; height: 100%; z-index: 1000; transform: translateX(-100%); }
             #sidebar.visible { transform: translateX(0); }
@@ -319,10 +361,18 @@
                 padding: 25px 20px 90px;
             }
             #app.details-visible-mobile #prompt-details-container { transform: translateX(0); }
-            #app.details-visible-mobile #mobile-new-prompt-fab { transform: scale(0); pointer-events: none; }
+            #app.details-visible-mobile #mobile-new-prompt-fab {
+                transform: scale(0);
+                pointer-events: none; 
+            }
+            #app.details-visible-mobile #mobile-search-btn,
+            #app.sidebar-is-open #mobile-search-btn {
+                transform: translateX(-50%) scale(0);
+                pointer-events: none;
+            }
             #app.details-visible-mobile #close-details-btn { display: flex; }
             
-            #sidebar-toggle, #mobile-new-prompt-fab { display: flex; }
+            #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
 
             .prompt-list-controls.select-mode-active #sort-by { display: none; }
         }
@@ -384,8 +434,13 @@
     </div>
     <div id="main-content">
         <button id="sidebar-toggle">☰</button>
+        <button id="mobile-search-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
         <button id="mobile-new-prompt-fab">+</button>
         <div id="prompt-list-container">
+            <div id="mobile-search-bar">
+                <input type="search" id="mobile-search-input" class="inline-form-input" placeholder="Search prompts...">
+                <button id="close-search-btn">×</button>
+            </div>
             <div class="prompt-list-controls">
                 <div class="controls-left">
                     <button id="select-mode-btn">Select</button>
@@ -539,6 +594,12 @@ document.addEventListener('DOMContentLoaded', () => {
         importFileInput: document.getElementById('import-file-input'),
         exportBtn: document.getElementById('export-btn'),
         resetDataBtn: document.getElementById('reset-data-btn'),
+
+        // Mobile Search
+        mobileSearchBtn: document.getElementById('mobile-search-btn'),
+        mobileSearchBar: document.getElementById('mobile-search-bar'),
+        mobileSearchInput: document.getElementById('mobile-search-input'),
+        closeSearchBtn: document.getElementById('close-search-btn'),
         
         // Modals
         moveModal: document.getElementById('move-modal'),
@@ -704,7 +765,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getFilteredAndSortedPrompts() {
         let list = [...state.prompts];
-        const query = UI.search.value.trim().toLowerCase();
+        const desktopQuery = UI.search.value.trim().toLowerCase();
+        const mobileQuery = UI.mobileSearchInput.value.trim().toLowerCase();
+        const query = window.innerWidth <= 768 ? mobileQuery : desktopQuery;
+
         if (query) {
             list = list.filter(p => [p.title, p.body, p.notes, ...(p.tags || [])].join(' ').toLowerCase().includes(query));
             if (state.view.type !== 'search') { state.view = {type: 'search'}; renderSidebarNav(); }
@@ -730,7 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.promptList.querySelectorAll('li').forEach(li => li.remove());
         const promptsToRender = getFilteredAndSortedPrompts();
 
-        UI.newPromptPlaceholder.classList.toggle('visible', promptsToRender.length === 0 && !UI.search.value.trim());
+        UI.newPromptPlaceholder.classList.toggle('visible', promptsToRender.length === 0 && !UI.search.value.trim() && !UI.mobileSearchInput.value.trim());
         
         promptsToRender.forEach(prompt => {
             const li = document.createElement('li');
@@ -859,6 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.savePromptBtn.addEventListener('click', handleSavePrompt);
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
         UI.search.addEventListener('input', () => { updateUI(); });
+        UI.mobileSearchInput.addEventListener('input', () => { updateUI(); });
         UI.closeDetailsBtn.addEventListener('click', closePromptDetailsView);
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
         
@@ -904,6 +969,16 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.sidebarOverlay.classList.add('visible');
         });
         UI.sidebarOverlay.addEventListener('click', closeMobileSidebar);
+
+        UI.mobileSearchBtn.addEventListener('click', () => {
+            UI.mobileSearchBar.classList.add('visible');
+            UI.mobileSearchInput.focus();
+        });
+        UI.closeSearchBtn.addEventListener('click', () => {
+            UI.mobileSearchBar.classList.remove('visible');
+            UI.mobileSearchInput.value = '';
+            updateUI();
+        });
 
         UI.promptBody.addEventListener('input', updateCharCounter);
         UI.tagsContainer.addEventListener('click', e => { if (e.target.classList.contains('remove-tag')) removeTag(e.target.dataset.tag); else UI.tagsInput.focus(); });
