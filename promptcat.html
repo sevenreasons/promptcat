@@ -137,7 +137,10 @@
             pointer-events: auto;
         }
 
-        #app.sidebar-is-open #sidebar-toggle { opacity: 0; pointer-events: none; }
+        #app.sidebar-is-open #sidebar-toggle { 
+            transform: scale(0);
+            pointer-events: none; 
+        }
 
         #prompt-list-container { width: 35%; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .prompt-list-controls {
@@ -375,6 +378,10 @@
             #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
 
             .prompt-list-controls.select-mode-active #sort-by { display: none; }
+            
+            #prompt-list {
+                padding-bottom: 80px; /* Space for FABs */
+            }
         }
         
         .button-emoji { font-size: 1.2em; display: none; }
