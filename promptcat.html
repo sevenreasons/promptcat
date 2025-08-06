@@ -106,12 +106,13 @@
 
         /* --- Main Content --- */
         #main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-        #sidebar-toggle, #mobile-new-prompt-fab {
+        #sidebar-toggle, #mobile-new-prompt-fab, #close-details-btn {
             display: none; position: absolute; z-index: 1001;
             background: var(--bg-surface); border: 1px solid var(--border-color);
             color: var(--text-primary); cursor: pointer; border-radius: 12px;
             transition: opacity 0.3s, transform 0.3s;
             width: 44px; height: 44px; font-size: 22px;
+            align-items: center; justify-content: center;
         }
         #sidebar-toggle { bottom: 20px; left: 20px; }
         #mobile-new-prompt-fab { bottom: 20px; right: 20px; }
@@ -242,25 +243,28 @@
         #confirm-reset-btn:hover, .modal-confirm-btn.danger:hover { background-color: var(--red-hover); }
 
         /* --- Mobile --- */
-        #close-details-btn { display: none; }
+        #close-details-btn {
+            bottom: 20px;
+            right: 20px;
+        }
         @media (max-width: 768px) {
             #app { overflow-x: hidden; }
             #sidebar { position: absolute; left: 0; top: 0; height: 100%; z-index: 1000; transform: translateX(-100%); }
             #sidebar.visible { transform: translateX(0); }
             #main-content { position: absolute; width: 100%; height: 100%; transition: transform var(--animation-duration) ease-in-out; }
             #prompt-list-container, #prompt-details-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; transition: transform var(--animation-duration) ease-in-out; }
-            #prompt-details-container { transform: translateX(100%); z-index: 20; background: var(--bg-deep-space); padding-top: 60px; }
+            #prompt-details-container {
+                transform: translateX(100%);
+                z-index: 20;
+                background: var(--bg-deep-space);
+                padding: 25px 20px 90px;
+            }
             #app.details-visible-mobile #prompt-details-container { transform: translateX(0); }
             #app.details-visible-mobile #mobile-new-prompt-fab { transform: scale(0); pointer-events: none; }
+            #app.details-visible-mobile #close-details-btn { display: flex; }
             
-            #sidebar-toggle, #mobile-new-prompt-fab { display: flex; align-items: center; justify-content: center; }
-            #close-details-btn {
-                display: flex; position: absolute; top: 15px; right: 15px; z-index: 1001;
-                background: var(--bg-surface); border: 1px solid var(--border-color);
-                color: var(--text-primary); cursor: pointer;
-                width: 44px; height: 44px; font-size: 22px; border-radius: 12px;
-                align-items: center; justify-content: center;
-            }
+            #sidebar-toggle, #mobile-new-prompt-fab { display: flex; }
+
             .prompt-list-controls.select-mode-active #sort-by { display: none; }
         }
         
@@ -347,7 +351,6 @@
             </ul>
         </div>
         <div id="prompt-details-container">
-            <button id="close-details-btn">×</button>
             <div id="no-prompt-selected">
                 <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                 <p style="margin-top: 20px;">Select a prompt to view, or create a new one.</p>
@@ -375,6 +378,7 @@
                 </div>
             </div>
         </div>
+        <button id="close-details-btn">×</button>
     </div>
     
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
