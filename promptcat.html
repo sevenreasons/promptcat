@@ -112,10 +112,12 @@
         .inline-form-input { width: 100%; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 0.95em; }
 
         .sidebar-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); }
-        .io-buttons { display: flex; gap: 10px; }
-        .io-button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font-size: 0.9em; font-weight: 500; background-color: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; }
+        .io-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+        .io-button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font-size: 0.9em; font-weight: 500; background-color: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; min-width: 80px; }
         .io-button:hover { background-color: var(--border-color); }
         #import-file-input { display: none; }
+        #reset-data-btn { border-color: var(--red-hover); color: var(--text-secondary); flex-basis: 100%;}
+        #reset-data-btn:hover { background-color: var(--red-accent); color: white; }
 
         /* --- Main Content --- */
         #main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
@@ -141,7 +143,7 @@
         #bulk-move-btn { background-color: var(--primary-accent); }
         #bulk-delete-btn { background-color: var(--red-accent); }
 
-        #prompt-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; height: 100%; }
+        #prompt-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; height: 100%; position: relative; }
         #prompt-list li { display: flex; align-items: center; gap: 10px; padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.2s ease; }
         .prompt-info { flex-grow: 1; overflow: hidden; }
         #prompt-list li:hover { background-color: var(--bg-surface); }
@@ -153,6 +155,19 @@
         .prompt-list-tag:hover { background-color: var(--primary-accent); color: white; }
         #prompt-list li.active .prompt-list-tag { background-color: var(--primary-hover); color: white; }
         
+        #new-prompt-placeholder {
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%; text-align: center; color: var(--text-secondary); padding: 20px;
+        }
+        #new-prompt-placeholder.visible { display: flex; }
+        #new-prompt-placeholder p { margin-bottom: 20px; }
+        #new-prompt-placeholder-btn {
+            background-color: var(--primary-accent); color: white;
+            padding: 12px 24px; font-size: 1em; font-weight: 500; border-radius: 8px;
+            border: none; cursor: pointer; transition: background-color 0.2s ease;
+        }
+        #new-prompt-placeholder-btn:hover { background-color: var(--primary-hover); }
+
         .prompt-actions { display: flex; align-items: center; gap: 15px; margin-left: auto; flex-shrink: 0; }
         .select-checkbox { transform: scale(1.2); }
         .favorite-toggle {
@@ -194,16 +209,24 @@
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); z-index: 1000;
-            justify-content: center; align-items: center;
+            justify-content: center; align-items: center; animation: fadeInModal 0.2s ease-out;
         }
+        @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
         .modal-content {
             background-color: var(--bg-space); padding: 25px; border-radius: 12px;
             border: 1px solid var(--border-color); width: 90%; max-width: 400px;
+            animation: slideInModal 0.3s ease-out;
         }
+        @keyframes slideInModal { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         .modal-content h3 { margin-top: 0; }
         .modal-content select { margin-bottom: 20px; }
+        .modal-content p { margin-bottom: 25px; line-height: 1.6; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-        
+        #confirm-reset-btn, .modal-confirm-btn.danger { background-color: var(--red-accent); color: white; }
+        #confirm-reset-btn:hover, .modal-confirm-btn.danger:hover { background-color: var(--red-hover); }
+
         /* --- Mobile --- */
         #close-details-btn { display: none; }
         @media (max-width: 768px) {
@@ -280,6 +303,7 @@
                 <button id="import-btn" class="io-button"> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Import </button>
                 <input type="file" id="import-file-input" accept=".json">
                 <button id="export-btn" class="io-button"> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export </button>
+                <button id="reset-data-btn" class="io-button"> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Reset </button>
             </div>
         </div>
     </div>
@@ -302,7 +326,12 @@
                     </select>
                 </div>
             </div>
-            <ul id="prompt-list"></ul>
+            <ul id="prompt-list">
+                 <div id="new-prompt-placeholder">
+                    <p>No prompts here yet. Let's create one!</p>
+                    <button id="new-prompt-placeholder-btn">Create New Prompt</button>
+                </div>
+            </ul>
         </div>
         <div id="prompt-details-container">
             <button id="close-details-btn">×</button>
@@ -329,6 +358,7 @@
         </div>
     </div>
     
+    <!-- MODALS -->
     <div id="move-modal" class="modal-overlay">
         <div class="modal-content">
             <h3>Move Prompts</h3>
@@ -353,6 +383,28 @@
         </div>
     </div>
 
+    <div id="reset-data-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Reset All Data</h3>
+            <p>Are you sure you want to reset all data? This will permanently delete all prompts, folders, and tags. This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button id="cancel-reset-btn" class="io-button">Cancel</button>
+                <button id="confirm-reset-btn" class="action-btn">Yes, Reset Everything</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="generic-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="generic-modal-title"></h3>
+            <p id="generic-modal-message"></p>
+            <input type="text" id="generic-modal-input" class="inline-form-input" style="margin-bottom: 20px; display: none;">
+            <div class="modal-actions">
+                <button id="generic-modal-cancel-btn" class="io-button">Cancel</button>
+                <button id="generic-modal-confirm-btn" class="action-btn modal-confirm-btn">OK</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -363,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContent: document.getElementById('main-content'),
         sidebarToggle: document.getElementById('sidebar-toggle'),
         promptList: document.getElementById('prompt-list'),
+        newPromptPlaceholder: document.getElementById('new-prompt-placeholder'),
         promptDetails: document.getElementById('prompt-details'),
         noPromptSelected: document.getElementById('no-prompt-selected'),
         closeDetailsBtn: document.getElementById('close-details-btn'),
@@ -398,6 +451,9 @@ document.addEventListener('DOMContentLoaded', () => {
         importBtn: document.getElementById('import-btn'),
         importFileInput: document.getElementById('import-file-input'),
         exportBtn: document.getElementById('export-btn'),
+        resetDataBtn: document.getElementById('reset-data-btn'),
+        
+        // Modals
         moveModal: document.getElementById('move-modal'),
         moveCount: document.getElementById('move-count'),
         moveFolderSelect: document.getElementById('move-folder-select'),
@@ -408,6 +464,74 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelDeleteFolderBtn: document.getElementById('cancel-delete-folder-btn'),
         confirmDeleteFolderMoveBtn: document.getElementById('confirm-delete-folder-move-prompts'),
         confirmDeleteFolderAndPromptsBtn: document.getElementById('confirm-delete-folder-and-prompts'),
+        resetDataModal: document.getElementById('reset-data-modal'),
+        cancelResetBtn: document.getElementById('cancel-reset-btn'),
+        confirmResetBtn: document.getElementById('confirm-reset-btn'),
+        
+        // Generic Modal
+        genericModal: document.getElementById('generic-modal'),
+        genericModalTitle: document.getElementById('generic-modal-title'),
+        genericModalMessage: document.getElementById('generic-modal-message'),
+        genericModalInput: document.getElementById('generic-modal-input'),
+        genericModalCancelBtn: document.getElementById('generic-modal-cancel-btn'),
+        genericModalConfirmBtn: document.getElementById('generic-modal-confirm-btn'),
+    };
+
+    const ModalService = {
+        show: (config) => {
+            return new Promise((resolve) => {
+                UI.genericModalTitle.textContent = config.title || '';
+                UI.genericModalMessage.textContent = config.message || '';
+                
+                UI.genericModalInput.style.display = 'none';
+                UI.genericModalCancelBtn.style.display = 'inline-flex';
+                UI.genericModalConfirmBtn.classList.remove('danger');
+                
+                if (config.type === 'alert') {
+                    UI.genericModalCancelBtn.style.display = 'none';
+                }
+                
+                if (config.type === 'prompt') {
+                    UI.genericModalInput.style.display = 'block';
+                    UI.genericModalInput.value = config.defaultValue || '';
+                    setTimeout(() => UI.genericModalInput.focus(), 50);
+                }
+
+                if (config.confirmBtnText) UI.genericModalConfirmBtn.textContent = config.confirmBtnText;
+                if (config.cancelBtnText) UI.genericModalCancelBtn.textContent = config.cancelBtnText;
+                if (config.danger) UI.genericModalConfirmBtn.classList.add('danger');
+
+                UI.genericModal.style.display = 'flex';
+
+                const onConfirm = () => {
+                    cleanup();
+                    resolve(config.type === 'prompt' ? UI.genericModalInput.value : true);
+                };
+
+                const onCancel = () => {
+                    cleanup();
+                    resolve(config.type === 'prompt' ? null : false);
+                };
+
+                const cleanup = () => {
+                    UI.genericModal.style.display = 'none';
+                    UI.genericModalConfirmBtn.removeEventListener('click', onConfirm);
+                    UI.genericModalCancelBtn.removeEventListener('click', onCancel);
+                    UI.genericModal.removeEventListener('click', onOverlayClick);
+                };
+                
+                const onOverlayClick = (e) => {
+                    if (e.target === UI.genericModal) onCancel();
+                }
+
+                UI.genericModalConfirmBtn.addEventListener('click', onConfirm);
+                UI.genericModalCancelBtn.addEventListener('click', onCancel);
+                UI.genericModal.addEventListener('click', onOverlayClick);
+            });
+        },
+        alert: (message, title = 'Alert') => ModalService.show({ type: 'alert', title, message, confirmBtnText: 'OK' }),
+        confirm: (message, config = {}) => ModalService.show({ type: 'confirm', ...config, message }),
+        prompt: (message, config = {}) => ModalService.show({ type: 'prompt', ...config, message }),
     };
 
     let state = {
@@ -514,8 +638,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPrompts() {
-        UI.promptList.innerHTML = '';
-        getFilteredAndSortedPrompts().forEach(prompt => {
+        // Clear previous list items, but keep the placeholder
+        UI.promptList.querySelectorAll('li').forEach(li => li.remove());
+        const promptsToRender = getFilteredAndSortedPrompts();
+
+        UI.newPromptPlaceholder.classList.toggle('visible', promptsToRender.length === 0);
+        
+        promptsToRender.forEach(prompt => {
             const li = document.createElement('li');
             li.dataset.id = prompt.id;
             li.classList.toggle('active', prompt.id === state.currentPromptId);
@@ -554,8 +683,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderFolderDropdown() {
+        const currentFolder = UI.promptFolder.value;
         UI.promptFolder.innerHTML = `<option value="all">No Folder</option>`;
         state.folders.forEach(folder => UI.promptFolder.innerHTML += `<option value="${folder.id}">${folder.name}</option>`);
+        UI.promptFolder.innerHTML += `<option value="--create-new--" style="color: var(--primary-accent); font-weight: bold;">-- Create New Folder --</option>`;
+        UI.promptFolder.value = currentFolder;
     }
 
     function handleNewPromptClick() {
@@ -568,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             UI.promptFolder.value = 'all';
         }
+        UI.promptTitle.focus();
         if (window.innerWidth <= 768) { UI.app.classList.remove('sidebar-is-open'); UI.sidebar.classList.remove('visible'); }
     }
 
@@ -603,6 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function attachEventListeners() {
         UI.newPromptBtn.addEventListener('click', handleNewPromptClick);
+        document.getElementById('new-prompt-placeholder-btn').addEventListener('click', handleNewPromptClick);
         UI.savePromptBtn.addEventListener('click', handleSavePrompt);
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
         UI.search.addEventListener('input', () => { updateUI(); });
@@ -645,6 +779,8 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.importBtn.addEventListener('click', () => UI.importFileInput.click());
         UI.importFileInput.addEventListener('change', handleImport);
         UI.exportBtn.addEventListener('click', handleExport);
+        UI.resetDataBtn.addEventListener('click', () => UI.resetDataModal.style.display = 'flex');
+
         UI.sidebarToggle.addEventListener('click', e => { e.stopPropagation(); UI.app.classList.add('sidebar-is-open'); UI.sidebar.classList.add('visible'); });
         UI.mainContent.addEventListener('click', () => { if (UI.sidebar.classList.contains('visible')) { UI.app.classList.remove('sidebar-is-open'); UI.sidebar.classList.remove('visible'); }});
         UI.promptBody.addEventListener('input', updateCharCounter);
@@ -660,11 +796,39 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.confirmDeleteFolderMoveBtn.addEventListener('click', handleDeleteFolderMove);
         UI.confirmDeleteFolderAndPromptsBtn.addEventListener('click', handleDeleteFolderAndPrompts);
         UI.deleteFolderModal.addEventListener('click', (e) => { if (e.target === UI.deleteFolderModal) { UI.deleteFolderModal.style.display = 'none'; state.folderToDeleteId = null;} });
+
+        UI.cancelResetBtn.addEventListener('click', () => UI.resetDataModal.style.display = 'none');
+        UI.confirmResetBtn.addEventListener('click', handleResetAllData);
+        UI.resetDataModal.addEventListener('click', (e) => { if(e.target === UI.resetDataModal) UI.resetDataModal.style.display = 'none' });
+        
+        UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
+    }
+    
+    async function handleFolderDropdownChange() {
+        if (UI.promptFolder.value !== '--create-new--') return;
+
+        const currentSelection = state.currentPromptId ? state.prompts.find(p => p.id === state.currentPromptId).folderId || 'all' : 'all';
+        
+        const folderName = await ModalService.prompt('Enter new folder name:', { title: 'Create Folder' });
+
+        if (folderName && folderName.trim()) {
+            const newFolder = { id: Date.now(), name: folderName.trim() };
+            state.folders.push(newFolder);
+            saveData();
+            renderSidebarNav();
+            renderFolderDropdown();
+            UI.promptFolder.value = newFolder.id;
+        } else {
+            UI.promptFolder.value = currentSelection;
+        }
     }
 
-    function handleSavePrompt() {
+    async function handleSavePrompt() {
         const title = UI.promptTitle.value.trim(), body = UI.promptBody.value.trim();
-        if (!title && !body) { alert("Prompt must have a title or body."); return; }
+        if (!title && !body) { 
+            await ModalService.alert("Prompt must have a title or body.", "Cannot Save");
+            return; 
+        }
         const now = Date.now(), folderId = UI.promptFolder.value === 'all' ? null : Number(UI.promptFolder.value);
         if (state.currentPromptId && !state.isCreatingNew) {
             const prompt = state.prompts.find(p => p.id === state.currentPromptId);
@@ -809,8 +973,15 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBulkActionUI();
     }
     
-    function handleBulkDelete() {
-        if (state.selectedPromptIds.size > 0 && confirm(`Delete ${state.selectedPromptIds.size} selected prompts?`)) {
+    async function handleBulkDelete() {
+        if (state.selectedPromptIds.size === 0) return;
+        const confirmed = await ModalService.confirm(`Delete ${state.selectedPromptIds.size} selected prompts?`, {
+            title: 'Confirm Deletion',
+            confirmBtnText: 'Delete',
+            danger: true
+        });
+
+        if (confirmed) {
             state.prompts = state.prompts.filter(p => !state.selectedPromptIds.has(p.id));
             if (state.selectedPromptIds.has(state.currentPromptId)) state.currentPromptId = null;
             state.selectedPromptIds.clear(); state.isSelectMode = false;
@@ -818,8 +989,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleDeletePrompt() {
-        if (state.currentPromptId && confirm('Are you sure you want to delete this prompt?')) {
+    async function handleDeletePrompt() {
+        if (!state.currentPromptId) return;
+        const confirmed = await ModalService.confirm('Are you sure you want to delete this prompt?', {
+            title: 'Confirm Deletion',
+            confirmBtnText: 'Delete',
+            danger: true
+        });
+
+        if (confirmed) {
             state.prompts = state.prompts.filter(p => p.id !== state.currentPromptId);
             state.currentPromptId = null; state.isCreatingNew = false;
             saveData(); updateUI();
@@ -845,24 +1023,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleImport(event) {
         const file = event.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = e => {
+        reader.onload = async e => {
             try {
                 const data = JSON.parse(e.target.result);
                 if (data && Array.isArray(data.prompts) && Array.isArray(data.folders)) {
-                    if (confirm('This will overwrite all current data. Are you sure?')) {
+                    const confirmed = await ModalService.confirm(
+                        'This will overwrite all current data. This action cannot be undone.', 
+                        { title: 'Confirm Import', confirmBtnText: 'Overwrite', danger: true }
+                    );
+                    if (confirmed) {
                         state.prompts = data.prompts; state.folders = data.folders;
                         state.globalTags = data.globalTags || [];
                         state.currentPromptId = null; state.isCreatingNew = false; state.view = { type: 'folder', id: 'all' };
-                        saveData(); init(); alert('Import successful!');
+                        saveData(); init(); 
+                        await ModalService.alert('Import successful!', 'Success');
                     }
-                } else { alert('Invalid file format.'); }
-            } catch (error) { alert('Error reading or parsing the file.'); }
+                } else { 
+                    await ModalService.alert('The selected file has an invalid format.', 'Import Error');
+                }
+            } catch (error) { 
+                await ModalService.alert('An error occurred while reading or parsing the file.', 'Import Error');
+            }
         };
         reader.readAsText(file);
         UI.importFileInput.value = '';
     }
 
     function handleExport() {
+        if (state.prompts.length === 0 && state.folders.length === 0) {
+            ModalService.alert("There's no data to export.", "Export Empty");
+            return;
+        }
         const dataToExport = { prompts: state.prompts, folders: state.folders, globalTags: state.globalTags };
         const dataStr = JSON.stringify(dataToExport, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
@@ -871,6 +1062,15 @@ document.addEventListener('DOMContentLoaded', () => {
         a.href = url;
         a.download = `promptcat_backup_${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+    
+    function handleResetAllData() {
+        // This only removes items specific to this app. It will not clear
+        // localStorage for other sites or other local files.
+        localStorage.removeItem('prompts');
+        localStorage.removeItem('folders');
+        localStorage.removeItem('globalTags');
+        location.reload();
     }
 
     init();
