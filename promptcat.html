@@ -194,6 +194,17 @@
         .tags-container .remove-tag { cursor: pointer; font-weight: bold; font-size: 14px; }
         #tags-input { flex-grow: 1; background: none; border: none; color: var(--text-primary); padding: 4px; font-size: 1em; min-width: 100px; }
         
+        #tag-suggestions {
+            display: none; position: absolute;
+            top: 100%; left: 0; right: 0;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-top: none; border-radius: 0 0 8px 8px;
+            max-height: 150px; overflow-y: auto; z-index: 10;
+        }
+        .suggestion-item { padding: 10px 12px; cursor: pointer; transition: background-color 0.2s ease; }
+        .suggestion-item:hover, .suggestion-item.active { background-color: var(--primary-accent); color: white; }
+
         /* --- Modal --- */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -337,7 +348,13 @@
                     <button id="copy-prompt-btn" title="Copy prompt body"> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> </button>
                 </div>
                 <div class="form-group"> <label for="prompt-notes">Notes</label> <textarea id="prompt-notes" rows="4" placeholder="Add extra details or context..."></textarea> </div>
-                <div class="form-group"> <label for="tags-input">Tags</label> <div class="tags-container" id="tags-container"> <input type="text" id="tags-input" placeholder="Add tags..."> </div> </div>
+                <div class="form-group"> 
+                    <label for="tags-input">Tags</label> 
+                    <div class="tags-container" id="tags-container"> 
+                        <input type="text" id="tags-input" placeholder="Add tags..."> 
+                    </div> 
+                    <div id="tag-suggestions"></div>
+                </div>
                 <div class="action-buttons">
                     <button id="save-prompt" class="action-btn">Save</button>
                     <button id="delete-prompt" class="action-btn">Delete</button>
@@ -429,6 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addTagBtn: document.getElementById('add-tag-btn'),
         tagsContainer: document.getElementById('tags-container'),
         tagsInput: document.getElementById('tags-input'),
+        tagSuggestions: document.getElementById('tag-suggestions'),
         charCounter: document.getElementById('char-counter'),
         tagsList: document.getElementById('tags-list'),
         sortBy: document.getElementById('sort-by'),
@@ -793,21 +811,12 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.promptBody.addEventListener('input', updateCharCounter);
         UI.tagsContainer.addEventListener('click', e => { if (e.target.classList.contains('remove-tag')) removeTag(e.target.dataset.tag); else UI.tagsInput.focus(); });
         
-        UI.tagsInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addTag(UI.tagsInput.value);
-                UI.tagsInput.value = '';
-            }
-        });
-        UI.tagsInput.addEventListener('input', () => {
-            const value = UI.tagsInput.value;
-            if (value.endsWith(',')) {
-                const tagText = value.slice(0, -1);
-                addTag(tagText);
-                UI.tagsInput.value = '';
-            }
-        });
+        UI.tagsInput.addEventListener('keydown', handleTagInputKeydown);
+        UI.tagsInput.addEventListener('input', handleTagInput);
+        UI.tagsInput.addEventListener('focus', () => renderTagSuggestions(UI.tagsInput.value));
+        UI.tagsInput.addEventListener('blur', () => { setTimeout(() => UI.tagSuggestions.style.display = 'none', 150); });
+        UI.tagSuggestions.addEventListener('mousedown', handleSuggestionClick);
+
         
         // Modal listeners
         UI.cancelMoveBtn.addEventListener('click', () => UI.moveModal.style.display = 'none');
@@ -828,9 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function handleFolderDropdownChange() {
         if (UI.promptFolder.value !== '--create-new--') return;
-
         const currentSelection = state.currentPromptId ? state.prompts.find(p => p.id === state.currentPromptId).folderId || 'all' : 'all';
-        
         const folderName = await ModalService.prompt('Enter new folder name:', { title: 'Create Folder' });
 
         if (folderName && folderName.trim()) {
@@ -1100,9 +1107,56 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('globalTags');
         location.reload();
     }
+    
+    function renderTagSuggestions(inputValue) {
+        if (!inputValue) {
+            UI.tagSuggestions.style.display = 'none';
+            return;
+        }
+        const allTags = [...new Set([...state.prompts.flatMap(p => p.tags || []), ...state.globalTags])];
+        const suggestions = allTags.filter(tag => 
+            tag.toLowerCase().includes(inputValue.toLowerCase()) && !state.currentTags.includes(tag)
+        );
+
+        if (suggestions.length > 0) {
+            UI.tagSuggestions.innerHTML = suggestions.map(tag => `<div class="suggestion-item" data-tag="${tag}">${tag}</div>`).join('');
+            UI.tagSuggestions.style.display = 'block';
+        } else {
+            UI.tagSuggestions.style.display = 'none';
+        }
+    }
+
+    function handleSuggestionClick(e) {
+        const tag = e.target.dataset.tag;
+        if (tag) {
+            addTag(tag);
+            UI.tagsInput.value = '';
+            UI.tagSuggestions.style.display = 'none';
+            UI.tagsInput.focus();
+        }
+    }
+    
+    function handleTagInput() {
+        const value = UI.tagsInput.value;
+        if (value.endsWith(',')) {
+            const tagText = value.slice(0, -1);
+            addTag(tagText);
+            UI.tagsInput.value = '';
+        }
+        renderTagSuggestions(UI.tagsInput.value);
+    }
+
+    function handleTagInputKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addTag(UI.tagsInput.value);
+            UI.tagsInput.value = '';
+            UI.tagSuggestions.style.display = 'none';
+        }
+    }
 
     init();
 });
 </script>
 </body>
-</html>```
+</html>
