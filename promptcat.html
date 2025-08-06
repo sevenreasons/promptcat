@@ -142,22 +142,71 @@
         .controls-left, .controls-right { display: flex; gap: 10px; align-items: center; }
         .prompt-list-controls select, .prompt-list-controls button { background-color: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0 10px; border-radius: 6px; font-size: 0.9em; flex-shrink: 0; height: 32px; line-height: 30px; }
         .prompt-list-controls select { width: auto; appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0a0b5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 16px 12px; padding-right: 2rem;}
-        #bulk-action-bar { display: none; gap: 10px; }
+        
+        #select-all-btn {
+            max-width: 0;
+            opacity: 0;
+            transform: scaleX(0);
+            transform-origin: left;
+            padding: 0;
+            border: 0;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        #select-all-btn.visible {
+            max-width: 100px;
+            opacity: 1;
+            transform: scaleX(1);
+            padding: 0 10px;
+            border: 1px solid var(--border-color);
+        }
+        #bulk-action-bar {
+            display: flex;
+            gap: 10px;
+            max-width: 0;
+            opacity: 0;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        #bulk-action-bar.visible {
+            max-width: 200px;
+            opacity: 1;
+            transform: scaleX(1);
+        }
         #bulk-move-btn, #bulk-delete-btn { color: white; }
         #bulk-move-btn { background-color: var(--primary-accent); }
         #bulk-delete-btn { background-color: var(--red-accent); }
+        .prompt-list-controls.select-mode-active #sort-by {
+            max-width: 0;
+            opacity: 0;
+            transform: scaleX(0);
+            border: 0;
+            padding: 0;
+        }
+        #sort-by {
+            transition: all 0.3s ease;
+            max-width: 120px;
+            opacity: 1;
+            transform-origin: right;
+            transform: scaleX(1);
+        }
+
 
         #prompt-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; height: 100%; position: relative; }
         #prompt-list li { display: flex; align-items: center; gap: 10px; padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.2s ease; }
         .prompt-info { flex-grow: 1; overflow: hidden; }
         #prompt-list li:hover { background-color: var(--bg-surface); }
-        #prompt-list li.active { background-color: var(--primary-accent); }
+        #prompt-list li.active, #prompt-list li.selected { background-color: var(--primary-accent); }
+        #prompt-list li.active .prompt-list-title, #prompt-list li.selected .prompt-list-title { color: white; }
+        #prompt-list li.active .prompt-list-tag, #prompt-list li.selected .prompt-list-tag { background-color: var(--primary-hover); color: white; }
+
         .prompt-list-title { font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #prompt-list li.active .prompt-list-title { color: white; }
+        
         .prompt-list-tags { display: flex; flex-wrap: wrap; gap: 5px; }
         .prompt-list-tag { background-color: var(--bg-surface); color: var(--text-secondary); padding: 3px 8px; font-size: 0.75em; border-radius: 10px; font-weight: 500; transition: background-color 0.2s ease; }
         .prompt-list-tag:hover { background-color: var(--primary-accent); color: white; }
-        #prompt-list li.active .prompt-list-tag { background-color: var(--primary-hover); color: white; }
         
         #new-prompt-placeholder {
             display: none; flex-direction: column; justify-content: center; align-items: center;
@@ -340,7 +389,7 @@
             <div class="prompt-list-controls">
                 <div class="controls-left">
                     <button id="select-mode-btn">Select</button>
-                    <button id="select-all-btn" style="display: none;">Select All</button>
+                    <button id="select-all-btn">Select All</button>
                 </div>
                 <div class="controls-right">
                     <div id="bulk-action-bar">
@@ -686,7 +735,9 @@ document.addEventListener('DOMContentLoaded', () => {
         promptsToRender.forEach(prompt => {
             const li = document.createElement('li');
             li.dataset.id = prompt.id;
-            li.classList.toggle('active', prompt.id === state.currentPromptId);
+            li.classList.toggle('active', prompt.id === state.currentPromptId && !state.isSelectMode);
+            li.classList.toggle('selected', state.isSelectMode && state.selectedPromptIds.has(prompt.id));
+
             li.innerHTML = `
                 <div class="prompt-info">
                     <span class="prompt-list-title">${prompt.title || 'Untitled Prompt'}</span>
@@ -696,7 +747,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="favorite-toggle ${prompt.isFavorite ? 'active' : ''}" data-id="${prompt.id}" title="Toggle Favorite">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                     </span>
-                    ${state.isSelectMode ? `<input type="checkbox" class="select-checkbox" data-id="${prompt.id}" ${state.selectedPromptIds.has(prompt.id) ? 'checked' : ''}>` : ''}
                 </div>
             `;
             UI.promptList.appendChild(li);
@@ -784,14 +834,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function toggleSelectMode() { 
         state.isSelectMode = !state.isSelectMode; 
-        if (!state.isSelectMode) state.selectedPromptIds.clear(); 
+        if (!state.isSelectMode) {
+            state.selectedPromptIds.clear();
+        }
         UI.promptListControls.classList.toggle('select-mode-active', state.isSelectMode);
         updateUI(); 
     }
     function updateBulkActionUI() {
         UI.selectModeBtn.textContent = state.isSelectMode ? 'Cancel' : 'Select';
-        UI.selectAllBtn.style.display = state.isSelectMode ? 'inline-block' : 'none';
-        UI.bulkActionBar.style.display = state.isSelectMode && state.selectedPromptIds.size > 0 ? 'flex' : 'none';
+        UI.selectAllBtn.classList.toggle('visible', state.isSelectMode);
+        UI.bulkActionBar.classList.toggle('visible', state.isSelectMode && state.selectedPromptIds.size > 0);
     }
 
     function closeMobileSidebar() {
@@ -980,13 +1032,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handlePromptListClick(e) {
+        const li = e.target.closest('li[data-id]');
+        if (!li) return;
+        
+        const promptId = Number(li.dataset.id);
         const favoriteToggle = e.target.closest('.favorite-toggle');
         const tag = e.target.closest('.prompt-list-tag');
-        const li = e.target.closest('li[data-id]');
 
         if (favoriteToggle) {
             e.stopPropagation();
-            const prompt = state.prompts.find(p => p.id === Number(favoriteToggle.dataset.id));
+            const prompt = state.prompts.find(p => p.id === promptId);
             if (prompt) { prompt.isFavorite = !prompt.isFavorite; saveData(); renderPrompts(); renderSidebarNav(); }
             return;
         }
@@ -1002,18 +1057,18 @@ document.addEventListener('DOMContentLoaded', () => {
             updateUI();
             return;
         }
+        
         if (state.isSelectMode) {
-            const targetCheckbox = e.target.closest('.select-checkbox') || li?.querySelector('.select-checkbox');
-            if (targetCheckbox) {
-                targetCheckbox.checked = !targetCheckbox.checked;
-                const promptId = Number(targetCheckbox.dataset.id);
-                if(targetCheckbox.checked) state.selectedPromptIds.add(promptId); else state.selectedPromptIds.delete(promptId);
-                updateBulkActionUI();
+            li.classList.toggle('selected');
+            if (state.selectedPromptIds.has(promptId)) {
+                state.selectedPromptIds.delete(promptId);
+            } else {
+                state.selectedPromptIds.add(promptId);
             }
-            return;
+            updateBulkActionUI();
+        } else {
+            openPromptDetailsView(false, promptId);
         }
-        if (!li) return;
-        openPromptDetailsView(false, Number(li.dataset.id));
     }
     
     function handleAddFolder() {
@@ -1041,6 +1096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSelectAll() {
         const visibleIds = getFilteredAndSortedPrompts().map(p => p.id);
         const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => state.selectedPromptIds.has(id));
+        
         if (allVisibleSelected) {
             visibleIds.forEach(id => state.selectedPromptIds.delete(id));
         } else {
