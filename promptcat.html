@@ -197,9 +197,19 @@
         .form-group { position: relative; margin-bottom: 15px; }
         .form-group label { font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block; }
         input, textarea, select { width: 100%; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 1em; line-height: 1.5; font-family: var(--font-main); }
-        #char-counter { text-align: right; font-size: 0.8em; color: var(--text-secondary); margin-top: -5px; padding-right: 5px; }
-        #copy-prompt-btn { position: absolute; top: 32px; right: 10px; background: transparent; color: var(--text-secondary); border: none; border-radius: 5px; cursor: pointer; width: 30px; height: 30px; padding: 4px; transition: color 0.2s ease; }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0a0b5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+            padding-right: 2.5rem;
+        }
+        #char-counter { text-align: right; font-size: 0.8em; color: var(--text-secondary); margin-top: 5px; padding-right: 5px; }
+        #copy-prompt-btn { position: absolute; top: 35px; right: 8px; background: transparent; color: var(--text-secondary); border: none; border-radius: 5px; cursor: pointer; width: 30px; height: 30px; padding: 4px; transition: color 0.2s ease; }
         #copy-prompt-btn:hover { color: var(--text-primary); }
+        #copy-prompt-btn.copied { color: var(--primary-accent); }
+        
         .action-buttons { margin-top: 20px; display: flex; gap: 10px; }
         .action-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1em; font-weight: 500; padding: 12px; border-radius: 8px; border: none; cursor: pointer; transition: background-color 0.2s ease; }
         #save-prompt { background-color: var(--primary-accent); color: white; }
@@ -362,7 +372,7 @@
                     <label for="prompt-body">Prompt</label>
                     <textarea id="prompt-body" rows="8" placeholder="The content of your prompt..."></textarea>
                     <div id="char-counter">0 characters</div>
-                    <button id="copy-prompt-btn" title="Copy prompt body"> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> </button>
+                    <button id="copy-prompt-btn" title="Copy prompt body"> <svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> </button>
                 </div>
                 <div class="form-group"> <label for="prompt-notes">Notes</label> <textarea id="prompt-notes" rows="4" placeholder="Add extra details or context..."></textarea> </div>
                 <div class="form-group"> 
@@ -574,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPromptIds: new Set(),
         sortBy: 'dateCreated_desc',
         folderToDeleteId: null,
+        copyTimeout: null,
     };
 
     function init() { loadData(); attachEventListeners(); updateUI(); }
@@ -797,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
         UI.search.addEventListener('input', () => { updateUI(); });
         UI.closeDetailsBtn.addEventListener('click', closePromptDetailsView);
+        UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
         
         UI.primaryNavList.addEventListener('click', handleSidebarNavClick);
         UI.folderList.addEventListener('click', handleSidebarNavClick);
@@ -1185,6 +1197,28 @@ document.addEventListener('DOMContentLoaded', () => {
             addTag(UI.tagsInput.value);
             UI.tagsInput.value = '';
             UI.tagSuggestions.style.display = 'none';
+        }
+    }
+    
+    function handleCopyPrompt() {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(UI.promptBody.value).then(() => {
+                if(state.copyTimeout) clearTimeout(state.copyTimeout);
+                
+                UI.copyPromptBtn.classList.add('copied');
+                const originalTitle = UI.copyPromptBtn.title;
+                UI.copyPromptBtn.title = 'Copied!';
+                UI.copyPromptBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+                state.copyTimeout = setTimeout(() => {
+                    UI.copyPromptBtn.classList.remove('copied');
+                    UI.copyPromptBtn.title = originalTitle;
+                    UI.copyPromptBtn.innerHTML = `<svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                ModalService.alert('Could not copy to clipboard.');
+            });
         }
     }
 
