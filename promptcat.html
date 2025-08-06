@@ -115,6 +115,16 @@
         }
         #sidebar-toggle { bottom: 20px; left: 20px; }
         #mobile-new-prompt-fab { bottom: 20px; right: 20px; }
+        
+        .sidebar-overlay {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.2);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity var(--animation-duration) ease-in-out;
+        }
+        .sidebar-overlay.visible { display: block; opacity: 1; }
 
         #app.sidebar-is-open #sidebar-toggle { opacity: 0; pointer-events: none; }
 
@@ -363,6 +373,8 @@
         </div>
     </div>
     
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
     <!-- MODALS -->
     <div id="move-modal" class="modal-overlay">
         <div class="modal-content">
@@ -417,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const UI = {
         app: document.getElementById('app'),
         sidebar: document.getElementById('sidebar'),
+        sidebarOverlay: document.getElementById('sidebar-overlay'),
         mainContent: document.getElementById('main-content'),
         sidebarToggle: document.getElementById('sidebar-toggle'),
         mobileNewPromptFab: document.getElementById('mobile-new-prompt-fab'),
@@ -714,20 +727,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function closePromptDetailsView() {
+        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
+        
         if (window.innerWidth > 768) {
-            const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
             UI.promptDetails.classList.add('closing');
-            setTimeout(() => {
-                UI.promptDetails.classList.remove('closing');
-                state.isCreatingNew = false;
-                state.currentPromptId = null;
-                updateUI();
-            }, animationDuration);
         } else {
+            UI.app.classList.remove('details-visible-mobile');
+        }
+        
+        setTimeout(() => {
+            if(window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
             state.isCreatingNew = false;
             state.currentPromptId = null;
             updateUI();
-        }
+        }, animationDuration);
     }
 
     function renderTags() {
@@ -760,6 +773,12 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.selectModeBtn.textContent = state.isSelectMode ? 'Cancel' : 'Select';
         UI.selectAllBtn.style.display = state.isSelectMode ? 'inline-block' : 'none';
         UI.bulkActionBar.style.display = state.isSelectMode && state.selectedPromptIds.size > 0 ? 'flex' : 'none';
+    }
+
+    function closeMobileSidebar() {
+        UI.app.classList.remove('sidebar-is-open');
+        UI.sidebar.classList.remove('visible');
+        UI.sidebarOverlay.classList.remove('visible');
     }
 
     function attachEventListeners() {
@@ -806,8 +825,14 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.exportBtn.addEventListener('click', handleExport);
         UI.resetDataBtn.addEventListener('click', () => UI.resetDataModal.style.display = 'flex');
 
-        UI.sidebarToggle.addEventListener('click', e => { e.stopPropagation(); UI.app.classList.add('sidebar-is-open'); UI.sidebar.classList.add('visible'); });
-        UI.mainContent.addEventListener('click', () => { if (UI.sidebar.classList.contains('visible')) { UI.app.classList.remove('sidebar-is-open'); UI.sidebar.classList.remove('visible'); }});
+        UI.sidebarToggle.addEventListener('click', e => { 
+            e.stopPropagation(); 
+            UI.app.classList.add('sidebar-is-open'); 
+            UI.sidebar.classList.add('visible'); 
+            UI.sidebarOverlay.classList.add('visible');
+        });
+        UI.sidebarOverlay.addEventListener('click', closeMobileSidebar);
+
         UI.promptBody.addEventListener('input', updateCharCounter);
         UI.tagsContainer.addEventListener('click', e => { if (e.target.classList.contains('remove-tag')) removeTag(e.target.dataset.tag); else UI.tagsInput.focus(); });
         
