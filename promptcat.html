@@ -106,17 +106,16 @@
 
         /* --- Main Content --- */
         #main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-        #sidebar-toggle, #mobile-new-prompt-fab, #close-details-btn, #mobile-search-btn, #close-fullscreen-fab {
+        #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn, #close-fullscreen-fab {
             display: none; position: absolute; z-index: 1001;
             background: var(--bg-surface); border: 1px solid var(--border-color);
             color: var(--text-primary); cursor: pointer; border-radius: 12px;
             transition: opacity 0.3s, transform 0.3s;
             width: 44px; height: 44px; font-size: 22px;
             align-items: center; justify-content: center;
-            opacity: 1;
         }
         #sidebar-toggle { bottom: 20px; left: 20px; }
-        #mobile-new-prompt-fab { bottom: 20px; right: 20px; }
+        #mobile-new-prompt-fab { bottom: 20px; right: 20px; z-index: 1002; }
         #mobile-search-btn { bottom: 20px; left: 50%; transform: translateX(-50%); }
         #mobile-search-btn svg { width: 20px; height: 20px; }
         
@@ -378,12 +377,8 @@
 
         /* --- Mobile --- */
         #mobile-search-bar { display: none; }
-        #close-details-btn {
-            bottom: 20px;
-            right: 20px;
-        }
+        
         @media (max-width: 768px) {
-            #sidebar-header { display: none; }
             #mobile-search-bar {
                 position: absolute;
                 top: 0;
@@ -426,27 +421,47 @@
             #prompt-details-container { 
                 width: 100%; height: 100%; position: absolute; top: 0; left: 0; 
                 transform: translateX(100%);
-                transition: transform var(--animation-duration) ease-in-out;
+                transition: transform var(--animation-duration) ease-out;
                 z-index: 20;
                 background: var(--bg-deep-space);
                 padding: 25px 20px 90px;
             }
             #app.details-visible-mobile #prompt-details-container { transform: translateX(0); }
             
-            #app.details-visible-mobile #mobile-new-prompt-fab {
-                transform: scale(0);
-                pointer-events: none; 
-                opacity: 0;
-            }
             #app.details-visible-mobile #mobile-search-btn,
             #app.sidebar-is-open #mobile-search-btn {
                 transform: translateX(-50%) scale(0);
                 pointer-events: none;
                 opacity: 0;
             }
-            #app.details-visible-mobile #close-details-btn { display: flex; }
-            
+
             #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
+
+            /* FAB Morphing Logic */
+            #mobile-new-prompt-fab::before,
+            #mobile-new-prompt-fab::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 20px;
+                height: 3px;
+                background-color: var(--text-primary);
+                border-radius: 2px;
+                transition: transform var(--animation-duration) ease-in-out;
+            }
+            #mobile-new-prompt-fab::before {
+                transform: translate(-50%, -50%);
+            }
+            #mobile-new-prompt-fab::after {
+                transform: translate(-50%, -50%) rotate(90deg);
+            }
+            #app.details-visible-mobile #mobile-new-prompt-fab::before {
+                transform: translate(-50%, -50%) rotate(45deg);
+            }
+            #app.details-visible-mobile #mobile-new-prompt-fab::after {
+                transform: translate(-50%, -50%) rotate(-45deg);
+            }
 
             .prompt-list-controls { flex-wrap: wrap; }
             .prompt-list-controls.select-mode-active #sort-by { display: none; }
@@ -464,8 +479,7 @@
                 display: flex;
             }
             #app.fullscreen-active #mobile-new-prompt-fab,
-            #app.fullscreen-active #mobile-search-btn,
-            #app.fullscreen-active #close-details-btn {
+            #app.fullscreen-active #mobile-search-btn {
                 transform: scale(0);
                 pointer-events: none;
             }
@@ -529,7 +543,7 @@
     <div id="main-content">
         <button id="sidebar-toggle">☰</button>
         <button id="mobile-search-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
-        <button id="mobile-new-prompt-fab">+</button>
+        <button id="mobile-new-prompt-fab"></button>
         <div id="prompt-list-container">
             <div id="mobile-search-bar">
                 <input type="search" id="mobile-search-input" class="inline-form-input" placeholder="Search prompts...">
@@ -598,7 +612,6 @@
                 </div>
             </div>
         </div>
-        <button id="close-details-btn">×</button>
         <button id="close-fullscreen-fab">×</button>
     </div>
     
@@ -679,7 +692,6 @@ document.addEventListener('DOMContentLoaded', () => {
         newPromptPlaceholder: document.getElementById('new-prompt-placeholder'),
         promptDetails: document.getElementById('prompt-details'),
         noPromptSelected: document.getElementById('no-prompt-selected'),
-        closeDetailsBtn: document.getElementById('close-details-btn'),
         promptTitle: document.getElementById('prompt-title'),
         promptBody: document.getElementById('prompt-body'),
         promptNotes: document.getElementById('prompt-notes'),
@@ -1000,9 +1012,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (window.innerWidth > 768) {
             UI.promptDetails.classList.add('closing');
-        } else {
-            UI.app.classList.remove('details-visible-mobile');
         }
+        
+        // Always run the class removal for mobile, as it controls the slide-out
+        UI.app.classList.remove('details-visible-mobile');
         
         setTimeout(() => {
             if(window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
@@ -1054,13 +1067,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function attachEventListeners() {
         UI.newPromptBtn.addEventListener('click', () => openPromptDetailsView(true));
-        UI.mobileNewPromptFab.addEventListener('click', () => openPromptDetailsView(true));
+        
+        UI.mobileNewPromptFab.addEventListener('click', () => {
+            if (UI.app.classList.contains('details-visible-mobile')) {
+                closePromptDetailsView();
+            } else {
+                openPromptDetailsView(true);
+            }
+        });
+
         document.getElementById('new-prompt-placeholder-btn').addEventListener('click', () => openPromptDetailsView(true));
         UI.savePromptBtn.addEventListener('click', handleSavePrompt);
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
         UI.search.addEventListener('input', () => { updateUI(); });
         UI.mobileSearchInput.addEventListener('input', () => { updateUI(); });
-        UI.closeDetailsBtn.addEventListener('click', closePromptDetailsView);
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
         UI.expandPromptBtn.addEventListener('click', () => handleOpenFullscreen('prompt'));
         UI.expandNotesBtn.addEventListener('click', () => handleOpenFullscreen('notes'));
