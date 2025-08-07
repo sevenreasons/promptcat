@@ -20,12 +20,12 @@
         body { font-family: var(--font-main); background-color: var(--bg-deep-space); color: var(--text-primary); }
         #app { display: flex; width: 100%; height: 100dvh; position: relative; }
 
-        /* --- Scrollbar Hiding --- */
-        #sidebar-content, #prompt-list, #prompt-details-container, #tag-suggestions, #fullscreen-prompt-textarea {
+        /* --- Global Scrollbar Hiding --- */
+        * {
             scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* Internet Explorer 10+ */
+           -ms-overflow-style: none;  /* Internet Explorer 10+ */
         }
-        #sidebar-content::-webkit-scrollbar, #prompt-list::-webkit-scrollbar, #prompt-details-container::-webkit-scrollbar, #tag-suggestions::-webkit-scrollbar, #fullscreen-prompt-textarea::-webkit-scrollbar {
+        *::-webkit-scrollbar {
             display: none; /* Safari and Chrome */
         }
 
@@ -1528,4 +1528,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>
+</html>```
