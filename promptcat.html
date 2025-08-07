@@ -113,6 +113,7 @@
             transition: opacity 0.3s, transform 0.3s;
             width: 44px; height: 44px; font-size: 22px;
             align-items: center; justify-content: center;
+            opacity: 1;
         }
         #sidebar-toggle { bottom: 20px; left: 20px; }
         #mobile-new-prompt-fab { bottom: 20px; right: 20px; }
@@ -303,6 +304,9 @@
         #expand-prompt-btn {
             top: 72px;
         }
+        #expand-notes-btn {
+            top: 35px;
+        }
         
         .action-buttons { margin-top: 20px; display: flex; gap: 10px; }
         .action-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1em; font-weight: 500; padding: 12px; border-radius: 8px; border: none; cursor: pointer; transition: background-color 0.2s ease; }
@@ -418,22 +422,27 @@
             #sidebar { position: absolute; left: 0; top: 0; height: 100%; z-index: 1000; transform: translateX(-100%); }
             #sidebar.visible { transform: translateX(0); }
             #main-content { position: absolute; width: 100%; height: 100%; transition: transform var(--animation-duration) ease-in-out; }
-            #prompt-list-container, #prompt-details-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; transition: transform var(--animation-duration) ease-in-out; }
-            #prompt-details-container {
+            #prompt-list-container { width: 100%; height: 100%; }
+            #prompt-details-container { 
+                width: 100%; height: 100%; position: absolute; top: 0; left: 0; 
                 transform: translateX(100%);
+                transition: transform var(--animation-duration) ease-in-out;
                 z-index: 20;
                 background: var(--bg-deep-space);
                 padding: 25px 20px 90px;
             }
             #app.details-visible-mobile #prompt-details-container { transform: translateX(0); }
+            
             #app.details-visible-mobile #mobile-new-prompt-fab {
                 transform: scale(0);
                 pointer-events: none; 
+                opacity: 0;
             }
             #app.details-visible-mobile #mobile-search-btn,
             #app.sidebar-is-open #mobile-search-btn {
                 transform: translateX(-50%) scale(0);
                 pointer-events: none;
+                opacity: 0;
             }
             #app.details-visible-mobile #close-details-btn { display: flex; }
             
@@ -569,7 +578,13 @@
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                     </button>
                 </div>
-                <div class="form-group"> <label for="prompt-notes">Notes</label> <textarea id="prompt-notes" rows="2" placeholder="Add extra details or context..."></textarea> </div>
+                <div class="form-group">
+                    <label for="prompt-notes">Notes</label>
+                    <textarea id="prompt-notes" rows="2" placeholder="Add extra details or context..."></textarea>
+                    <button id="expand-notes-btn" class="editor-action-btn" title="Fullscreen Editor">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                    </button>
+                </div>
                 <div class="form-group"> 
                     <label for="tags-input">Tags</label> 
                     <div class="tags-container" id="tags-container"> 
@@ -671,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promptFolder: document.getElementById('prompt-folder'),
         copyPromptBtn: document.getElementById('copy-prompt-btn'),
         expandPromptBtn: document.getElementById('expand-prompt-btn'),
+        expandNotesBtn: document.getElementById('expand-notes-btn'),
         newPromptBtn: document.getElementById('new-prompt-btn'),
         savePromptBtn: document.getElementById('save-prompt'),
         deletePromptBtn: document.getElementById('delete-prompt'),
@@ -810,6 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
         folderToDeleteId: null,
         copyTimeout: null,
         quickCopyTimeouts: {},
+        fullscreenTarget: null,
     };
 
     function init() { loadData(); attachEventListeners(); updateUI(); }
@@ -1045,7 +1062,8 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.mobileSearchInput.addEventListener('input', () => { updateUI(); });
         UI.closeDetailsBtn.addEventListener('click', closePromptDetailsView);
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
-        UI.expandPromptBtn.addEventListener('click', handleOpenFullscreen);
+        UI.expandPromptBtn.addEventListener('click', () => handleOpenFullscreen('prompt'));
+        UI.expandNotesBtn.addEventListener('click', () => handleOpenFullscreen('notes'));
         
         UI.primaryNavList.addEventListener('click', handleSidebarNavClick);
         UI.folderList.addEventListener('click', handleSidebarNavClick);
@@ -1131,9 +1149,16 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
     }
     
-    function handleOpenFullscreen() {
-        UI.fullscreenPromptTitle.textContent = UI.promptTitle.value || 'Editing Prompt';
-        UI.fullscreenPromptTextarea.value = UI.promptBody.value;
+    function handleOpenFullscreen(target) {
+        state.fullscreenTarget = target;
+        if (target === 'prompt') {
+            UI.fullscreenPromptTitle.textContent = UI.promptTitle.value || 'Editing Prompt';
+            UI.fullscreenPromptTextarea.value = UI.promptBody.value;
+        } else if (target === 'notes') {
+            UI.fullscreenPromptTitle.textContent = 'Editing Notes';
+            UI.fullscreenPromptTextarea.value = UI.promptNotes.value;
+        }
+
         UI.app.classList.add('fullscreen-active');
         UI.fullscreenPromptModal.style.display = 'flex';
         setTimeout(() => UI.fullscreenPromptTextarea.focus(), 50);
@@ -1142,11 +1167,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleCloseFullscreen() {
         UI.fullscreenPromptModal.style.display = 'none';
         UI.app.classList.remove('fullscreen-active');
+        state.fullscreenTarget = null;
     }
     
     function handleSaveAndCloseFullscreen() {
-        UI.promptBody.value = UI.fullscreenPromptTextarea.value;
-        updateCharCounter();
+        if (state.fullscreenTarget === 'prompt') {
+            UI.promptBody.value = UI.fullscreenPromptTextarea.value;
+            updateCharCounter();
+        } else if (state.fullscreenTarget === 'notes') {
+            UI.promptNotes.value = UI.fullscreenPromptTextarea.value;
+        }
         handleCloseFullscreen();
     }
     
@@ -1528,4 +1558,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>```
+</html>
