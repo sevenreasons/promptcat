@@ -379,7 +379,7 @@
             border-top: 1px solid var(--border-color);
         }
         #fullscreen-prompt-modal .modal-actions button { min-width: 120px; }
-
+        
         /* --- Mobile --- */
         #mobile-search-bar { display: none; }
         
@@ -482,12 +482,11 @@
 
             /* Fullscreen Mobile FABs */
             #app.fullscreen-active #sidebar-toggle {
-                display: flex;
+                transform: scale(0);
+                pointer-events: none;
             }
             #app.fullscreen-active #mobile-new-prompt-fab {
                 z-index: 2002;
-                transform: scale(1);
-                pointer-events: auto;
             }
             #app.fullscreen-active #mobile-search-btn {
                 transform: scale(0);
@@ -1001,8 +1000,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openPromptDetailsView(isNew, promptId = null) {
+        const currentActive = UI.promptList.querySelector('li.active');
+        if (currentActive) {
+            currentActive.classList.remove('active');
+        }
+
         state.isCreatingNew = isNew;
         state.currentPromptId = promptId;
+
         if (isNew) {
             UI.promptTitle.value = ''; UI.promptBody.value = ''; UI.promptNotes.value = '';
             updateCharCounter(); loadTags([]);
@@ -1012,9 +1017,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 UI.promptFolder.value = 'all';
             }
             UI.promptTitle.focus();
+        } else {
+            const newActive = UI.promptList.querySelector(`li[data-id="${promptId}"]`);
+            if (newActive) {
+                newActive.classList.add('active');
+            }
         }
-        updateUI();
-        if (window.innerWidth <= 768) { UI.app.classList.remove('sidebar-is-open'); UI.sidebar.classList.remove('visible'); }
+        
+        renderPromptDetails(true);
+
+        UI.app.classList.add('details-visible-mobile');
+        if (window.innerWidth <= 768) { 
+            UI.app.classList.remove('sidebar-is-open'); 
+            UI.sidebar.classList.remove('visible'); 
+        }
     }
 
     function closePromptDetailsView() {
@@ -1028,9 +1044,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         setTimeout(() => {
             if(window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
+            
+            const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
+            if (currentActive) {
+                currentActive.classList.remove('active');
+            }
+
             state.isCreatingNew = false;
             state.currentPromptId = null;
-            updateUI();
+            
+            renderPromptDetails(false);
+
         }, animationDuration);
     }
 
@@ -1090,8 +1114,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('new-prompt-placeholder-btn').addEventListener('click', () => openPromptDetailsView(true));
         UI.savePromptBtn.addEventListener('click', handleSavePrompt);
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
-        UI.search.addEventListener('input', () => { updateUI(); });
-        UI.mobileSearchInput.addEventListener('input', () => { updateUI(); });
+        UI.search.addEventListener('input', () => updateUI());
+        UI.mobileSearchInput.addEventListener('input', () => updateUI());
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
         UI.expandPromptBtn.addEventListener('click', () => handleOpenFullscreen('prompt'));
         UI.expandNotesBtn.addEventListener('click', () => handleOpenFullscreen('notes'));
@@ -1251,8 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveData();
-        renderSidebarNav();
-        renderPrompts();
+        updateUI(); // Re-render everything to show the new/updated prompt
         closePromptDetailsView();
     }
     
@@ -1448,6 +1471,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.prompts = state.prompts.filter(p => p.id !== idToDelete);
             saveData();
             closePromptDetailsView();
+            // A full re-render is needed after deletion
+            setTimeout(updateUI, 50); 
         }
     }
 
