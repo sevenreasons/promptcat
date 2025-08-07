@@ -146,7 +146,7 @@
         .prompt-list-controls {
             padding: 10px 15px; display: flex; gap: 10px; align-items: center;
             border-bottom: 1px solid var(--border-color); flex-shrink: 0;
-            justify-content: space-between; flex-wrap: nowrap; /* Changed */
+            justify-content: space-between; flex-wrap: nowrap;
         }
         .controls-left, .controls-right { display: flex; gap: 10px; align-items: center; }
         .prompt-list-controls select, .prompt-list-controls button { background-color: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0 10px; border-radius: 6px; font-size: 0.9em; flex-shrink: 0; height: 32px; line-height: 30px; }
@@ -253,8 +253,8 @@
         }
 
         .form-group { position: relative; margin-bottom: 15px; }
-        .form-group.grows { flex-grow: 1; display: flex; flex-direction: column; } /* New class */
-        .form-group.grows textarea { flex-grow: 1; } /* New rule */
+        .form-group.grows { flex-grow: 1; display: flex; flex-direction: column; }
+        .form-group.grows textarea { flex-grow: 1; resize: none; }
 
         .form-group label { font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block; }
         input, textarea, select { width: 100%; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 1em; line-height: 1.5; font-family: var(--font-main); }
@@ -380,7 +380,7 @@
             
             #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
 
-            .prompt-list-controls { flex-wrap: wrap; } /* allow wrapping on smallest screens */
+            .prompt-list-controls { flex-wrap: wrap; }
             .prompt-list-controls.select-mode-active #sort-by { display: none; }
             
             #prompt-list {
@@ -489,7 +489,7 @@
                     <div id="char-counter">0 characters</div>
                     <button id="copy-prompt-btn" title="Copy prompt body"> <svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> </button>
                 </div>
-                <div class="form-group"> <label for="prompt-notes">Notes</label> <textarea id="prompt-notes" rows="4" placeholder="Add extra details or context..."></textarea> </div>
+                <div class="form-group"> <label for="prompt-notes">Notes</label> <textarea id="prompt-notes" rows="2" placeholder="Add extra details or context..."></textarea> </div>
                 <div class="form-group"> 
                     <label for="tags-input">Tags</label> 
                     <div class="tags-container" id="tags-container"> 
@@ -831,7 +831,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPromptDetails(show) {
         if (show) {
             UI.noPromptSelected.style.display = 'none';
-            // Use flex display for the container to enable full height
             UI.promptDetails.style.display = 'flex';
             renderFolderDropdown();
             const prompt = state.prompts.find(p => p.id === state.currentPromptId);
