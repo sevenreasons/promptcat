@@ -21,11 +21,11 @@
         #app { display: flex; width: 100%; height: 100dvh; position: relative; }
 
         /* --- Scrollbar Hiding --- */
-        #sidebar-content, #prompt-list, #prompt-details-container {
+        #sidebar-content, #prompt-list, #prompt-details-container, #tag-suggestions {
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none;  /* Internet Explorer 10+ */
         }
-        #sidebar-content::-webkit-scrollbar, #prompt-list::-webkit-scrollbar, #prompt-details-container::-webkit-scrollbar {
+        #sidebar-content::-webkit-scrollbar, #prompt-list::-webkit-scrollbar, #prompt-details-container::-webkit-scrollbar, #tag-suggestions::-webkit-scrollbar {
             display: none; /* Safari and Chrome */
         }
 
@@ -146,7 +146,7 @@
         .prompt-list-controls {
             padding: 10px 15px; display: flex; gap: 10px; align-items: center;
             border-bottom: 1px solid var(--border-color); flex-shrink: 0;
-            justify-content: space-between; flex-wrap: wrap;
+            justify-content: space-between; flex-wrap: nowrap; /* Changed */
         }
         .controls-left, .controls-right { display: flex; gap: 10px; align-items: center; }
         .prompt-list-controls select, .prompt-list-controls button { background-color: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0 10px; border-radius: 6px; font-size: 0.9em; flex-shrink: 0; height: 32px; line-height: 30px; }
@@ -240,10 +240,10 @@
         .favorite-toggle.active { opacity: 1; color: var(--primary-accent); }
         .favorite-toggle svg { width: 20px; height: 20px; display: block; }
 
-        #prompt-details-container { flex-grow: 1; padding: 25px; overflow-y: auto; position: relative; }
+        #prompt-details-container { flex-grow: 1; padding: 25px; overflow-y: auto; position: relative; display: flex; flex-direction: column;}
         #no-prompt-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: var(--text-secondary); text-align: center; transition: opacity 0.3s ease-out; }
         
-        #prompt-details { display: none; }
+        #prompt-details { display: none; height: 100%; display: flex; flex-direction: column; }
         
         @media (min-width: 769px) {
             #prompt-details { animation: fadeIn var(--animation-duration) ease-in-out; }
@@ -253,6 +253,9 @@
         }
 
         .form-group { position: relative; margin-bottom: 15px; }
+        .form-group.grows { flex-grow: 1; display: flex; flex-direction: column; } /* New class */
+        .form-group.grows textarea { flex-grow: 1; } /* New rule */
+
         .form-group label { font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block; }
         input, textarea, select { width: 100%; padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 1em; line-height: 1.5; font-family: var(--font-main); }
         select {
@@ -377,6 +380,7 @@
             
             #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
 
+            .prompt-list-controls { flex-wrap: wrap; } /* allow wrapping on smallest screens */
             .prompt-list-controls.select-mode-active #sort-by { display: none; }
             
             #prompt-list {
@@ -477,11 +481,11 @@
                 <p style="margin-top: 20px;">Select a prompt to view, or create a new one.</p>
             </div>
             <div id="prompt-details">
-                <div class="form-group"> <input type="text" id="prompt-title" placeholder="Prompt Title"> </div>
+                <div class="form-group"> <label for="prompt-title">Title</label> <input type="text" id="prompt-title" placeholder="Prompt Title"> </div>
                 <div class="form-group"> <label for="prompt-folder">Folder</label> <select id="prompt-folder"></select> </div>
-                <div class="form-group">
+                <div class="form-group grows">
                     <label for="prompt-body">Prompt</label>
-                    <textarea id="prompt-body" rows="8" placeholder="The content of your prompt..."></textarea>
+                    <textarea id="prompt-body" placeholder="The content of your prompt..."></textarea>
                     <div id="char-counter">0 characters</div>
                     <button id="copy-prompt-btn" title="Copy prompt body"> <svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> </button>
                 </div>
@@ -827,7 +831,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPromptDetails(show) {
         if (show) {
             UI.noPromptSelected.style.display = 'none';
-            UI.promptDetails.style.display = 'block';
+            // Use flex display for the container to enable full height
+            UI.promptDetails.style.display = 'flex';
             renderFolderDropdown();
             const prompt = state.prompts.find(p => p.id === state.currentPromptId);
             if (prompt) {
