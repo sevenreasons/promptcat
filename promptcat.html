@@ -21,11 +21,11 @@
         #app { display: flex; width: 100%; height: 100dvh; position: relative; }
 
         /* --- Scrollbar Hiding --- */
-        #sidebar-content, #prompt-list, #prompt-details-container, #tag-suggestions {
+        #sidebar-content, #prompt-list, #prompt-details-container, #tag-suggestions, #fullscreen-prompt-textarea {
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none;  /* Internet Explorer 10+ */
         }
-        #sidebar-content::-webkit-scrollbar, #prompt-list::-webkit-scrollbar, #prompt-details-container::-webkit-scrollbar, #tag-suggestions::-webkit-scrollbar {
+        #sidebar-content::-webkit-scrollbar, #prompt-list::-webkit-scrollbar, #prompt-details-container::-webkit-scrollbar, #tag-suggestions::-webkit-scrollbar, #fullscreen-prompt-textarea::-webkit-scrollbar {
             display: none; /* Safari and Chrome */
         }
 
@@ -106,7 +106,7 @@
 
         /* --- Main Content --- */
         #main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-        #sidebar-toggle, #mobile-new-prompt-fab, #close-details-btn, #mobile-search-btn {
+        #sidebar-toggle, #mobile-new-prompt-fab, #close-details-btn, #mobile-search-btn, #close-fullscreen-fab {
             display: none; position: absolute; z-index: 1001;
             background: var(--bg-surface); border: 1px solid var(--border-color);
             color: var(--text-primary); cursor: pointer; border-radius: 12px;
@@ -116,11 +116,7 @@
         }
         #sidebar-toggle { bottom: 20px; left: 20px; }
         #mobile-new-prompt-fab { bottom: 20px; right: 20px; }
-        #mobile-search-btn {
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
+        #mobile-search-btn { bottom: 20px; left: 50%; transform: translateX(-50%); }
         #mobile-search-btn svg { width: 20px; height: 20px; }
         
         .sidebar-overlay {
@@ -202,7 +198,6 @@
             transform: scaleX(1);
         }
 
-
         #prompt-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; height: 100%; position: relative; }
         #prompt-list li { display: flex; align-items: center; gap: 10px; padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.2s ease; }
         .prompt-info { flex-grow: 1; overflow: hidden; }
@@ -230,11 +225,15 @@
         }
         #new-prompt-placeholder-btn:hover { background-color: var(--primary-hover); }
 
-        .prompt-actions { display: flex; align-items: center; gap: 15px; margin-left: auto; flex-shrink: 0; }
-        .select-checkbox { transform: scale(1.2); }
+        .prompt-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+        .quick-copy-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); opacity: 0.3; padding: 5px; border-radius: 5px; line-height: 0; transition: opacity 0.2s, color 0.2s ease; }
+        .quick-copy-btn:hover { opacity: 0.7; }
+        .quick-copy-btn.copied { color: var(--primary-accent); opacity: 1; }
+        .quick-copy-btn svg { width: 18px; height: 18px; }
+
         .favorite-toggle {
             cursor: pointer; color: var(--text-secondary); line-height: 1; opacity: 0.3;
-            transition: opacity 0.2s, color 0.2s ease; flex-shrink: 0;
+            transition: opacity 0.2s, color 0.2s ease; flex-shrink: 0; padding: 4px;
         }
         .favorite-toggle:hover { opacity: 0.7; }
         .favorite-toggle.active { opacity: 1; color: var(--primary-accent); }
@@ -267,9 +266,43 @@
             padding-right: 2.5rem;
         }
         #char-counter { text-align: right; font-size: 0.8em; color: var(--text-secondary); margin-top: 5px; padding-right: 5px; }
-        #copy-prompt-btn { position: absolute; top: 35px; right: 8px; background: transparent; color: var(--text-secondary); border: none; border-radius: 5px; cursor: pointer; width: 30px; height: 30px; padding: 4px; transition: color 0.2s ease; }
-        #copy-prompt-btn:hover { color: var(--text-primary); }
-        #copy-prompt-btn.copied { color: var(--primary-accent); }
+        
+        .editor-action-btn {
+            position: absolute;
+            right: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            padding: 6px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .editor-action-btn:hover {
+            opacity: 1;
+            background-color: var(--bg-surface);
+        }
+        .editor-action-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #copy-prompt-btn {
+            top: 35px;
+        }
+        #copy-prompt-btn.copied {
+            color: var(--primary-accent);
+            opacity: 1;
+        }
+        #expand-prompt-btn {
+            top: 72px;
+        }
         
         .action-buttons { margin-top: 20px; display: flex; gap: 10px; }
         .action-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1em; font-weight: 500; padding: 12px; border-radius: 8px; border: none; cursor: pointer; transition: background-color 0.2s ease; }
@@ -291,7 +324,7 @@
         .suggestion-item { padding: 10px 12px; cursor: pointer; transition: background-color 0.2s ease; }
         .suggestion-item:hover, .suggestion-item.active { background-color: var(--primary-accent); color: white; }
 
-        /* --- Modal --- */
+        /* --- Modals & Overlays --- */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); z-index: 1000;
@@ -312,7 +345,33 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         #confirm-reset-btn, .modal-confirm-btn.danger { background-color: var(--red-accent); color: white; }
         #confirm-reset-btn:hover, .modal-confirm-btn.danger:hover { background-color: var(--red-hover); }
-        
+
+        #fullscreen-prompt-modal {
+            background-color: rgba(18, 16, 25, 0.85); z-index: 2000;
+            padding: 3vw; backdrop-filter: blur(8px);
+        }
+        #fullscreen-prompt-modal .modal-content {
+            width: 100%; height: 100%; max-width: 1200px; padding: 0;
+            display: flex; flex-direction: column; gap: 0;
+        }
+        #fullscreen-header {
+            padding: 15px 20px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        #fullscreen-prompt-title {
+            margin: 0; font-size: 1.1em;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #fullscreen-prompt-textarea { 
+            flex-grow: 1; resize: none; font-size: 1.1em;
+            background: transparent; border: none; padding: 20px;
+        }
+        #fullscreen-prompt-modal .modal-actions { 
+            justify-content: flex-end; padding: 15px 20px; flex-shrink: 0;
+            border-top: 1px solid var(--border-color);
+        }
+        #fullscreen-prompt-modal .modal-actions button { min-width: 120px; }
+        #close-fullscreen-fab { z-index: 2001; bottom: 20px; right: 20px; }
+
         /* --- Mobile --- */
         #mobile-search-bar { display: none; }
         #close-details-btn {
@@ -385,6 +444,21 @@
             
             #prompt-list {
                 padding-bottom: 80px; /* Space for FABs */
+            }
+
+            #fullscreen-prompt-modal { padding: 20px 20px 90px 20px; }
+            #fullscreen-prompt-modal .modal-content { max-height: 100%; }
+
+            /* Fullscreen Mobile FABs */
+            #app.fullscreen-active #sidebar-toggle,
+            #app.fullscreen-active #close-fullscreen-fab {
+                display: flex;
+            }
+            #app.fullscreen-active #mobile-new-prompt-fab,
+            #app.fullscreen-active #mobile-search-btn,
+            #app.fullscreen-active #close-details-btn {
+                transform: scale(0);
+                pointer-events: none;
             }
         }
         
@@ -487,7 +561,13 @@
                     <label for="prompt-body">Prompt</label>
                     <textarea id="prompt-body" placeholder="The content of your prompt..."></textarea>
                     <div id="char-counter">0 characters</div>
-                    <button id="copy-prompt-btn" title="Copy prompt body"> <svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> </button>
+                    <button id="copy-prompt-btn" class="editor-action-btn" title="Copy prompt body">
+                        <svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <svg class="check-icon-svg" style="display:none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                    <button id="expand-prompt-btn" class="editor-action-btn" title="Fullscreen Editor">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                    </button>
                 </div>
                 <div class="form-group"> <label for="prompt-notes">Notes</label> <textarea id="prompt-notes" rows="2" placeholder="Add extra details or context..."></textarea> </div>
                 <div class="form-group"> 
@@ -504,11 +584,25 @@
             </div>
         </div>
         <button id="close-details-btn">×</button>
+        <button id="close-fullscreen-fab">×</button>
     </div>
     
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
     <!-- MODALS -->
+    <div id="fullscreen-prompt-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="fullscreen-header">
+                <h3 id="fullscreen-prompt-title"></h3>
+            </div>
+            <textarea id="fullscreen-prompt-textarea"></textarea>
+            <div class="modal-actions">
+                <button id="close-fullscreen-btn" class="io-button">Close</button>
+                <button id="save-and-close-fullscreen-btn" class="action-btn" style="background-color: var(--primary-accent); color: white;">Save & Close</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="move-modal" class="modal-overlay">
         <div class="modal-content">
             <h3>Move Prompts</h3>
@@ -576,6 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promptNotes: document.getElementById('prompt-notes'),
         promptFolder: document.getElementById('prompt-folder'),
         copyPromptBtn: document.getElementById('copy-prompt-btn'),
+        expandPromptBtn: document.getElementById('expand-prompt-btn'),
         newPromptBtn: document.getElementById('new-prompt-btn'),
         savePromptBtn: document.getElementById('save-prompt'),
         deletePromptBtn: document.getElementById('delete-prompt'),
@@ -626,6 +721,14 @@ document.addEventListener('DOMContentLoaded', () => {
         resetDataModal: document.getElementById('reset-data-modal'),
         cancelResetBtn: document.getElementById('cancel-reset-btn'),
         confirmResetBtn: document.getElementById('confirm-reset-btn'),
+        
+        // Fullscreen Modal
+        fullscreenPromptModal: document.getElementById('fullscreen-prompt-modal'),
+        fullscreenPromptTitle: document.getElementById('fullscreen-prompt-title'),
+        fullscreenPromptTextarea: document.getElementById('fullscreen-prompt-textarea'),
+        closeFullscreenBtn: document.getElementById('close-fullscreen-btn'),
+        closeFullscreenFab: document.getElementById('close-fullscreen-fab'),
+        saveAndCloseFullscreenBtn: document.getElementById('save-and-close-fullscreen-btn'),
         
         // Generic Modal
         genericModal: document.getElementById('generic-modal'),
@@ -706,6 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortBy: 'dateCreated_desc',
         folderToDeleteId: null,
         copyTimeout: null,
+        quickCopyTimeouts: {},
     };
 
     function init() { loadData(); attachEventListeners(); updateUI(); }
@@ -819,6 +923,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="prompt-list-tags">${(prompt.tags || []).map(tag => `<span class="prompt-list-tag" data-tag="${tag}">${tag}</span>`).join('')}</div>
                 </div>
                 <div class="prompt-actions">
+                    <button class="quick-copy-btn" title="Copy Prompt" data-id="${prompt.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" style="display: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
                     <span class="favorite-toggle ${prompt.isFavorite ? 'active' : ''}" data-id="${prompt.id}" title="Toggle Favorite">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                     </span>
@@ -937,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.mobileSearchInput.addEventListener('input', () => { updateUI(); });
         UI.closeDetailsBtn.addEventListener('click', closePromptDetailsView);
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
+        UI.expandPromptBtn.addEventListener('click', handleOpenFullscreen);
         
         UI.primaryNavList.addEventListener('click', handleSidebarNavClick);
         UI.folderList.addEventListener('click', handleSidebarNavClick);
@@ -999,9 +1108,13 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.tagsInput.addEventListener('focus', () => renderTagSuggestions(UI.tagsInput.value));
         UI.tagsInput.addEventListener('blur', () => { setTimeout(() => UI.tagSuggestions.style.display = 'none', 150); });
         UI.tagSuggestions.addEventListener('mousedown', handleSuggestionClick);
-
         
         // Modal listeners
+        UI.fullscreenPromptModal.addEventListener('click', (e) => { if (e.target === UI.fullscreenPromptModal) handleCloseFullscreen(); });
+        UI.closeFullscreenBtn.addEventListener('click', handleCloseFullscreen);
+        UI.closeFullscreenFab.addEventListener('click', handleCloseFullscreen);
+        UI.saveAndCloseFullscreenBtn.addEventListener('click', handleSaveAndCloseFullscreen);
+
         UI.cancelMoveBtn.addEventListener('click', () => UI.moveModal.style.display = 'none');
         UI.confirmMoveBtn.addEventListener('click', handleConfirmMove);
         UI.moveModal.addEventListener('click', (e) => { if (e.target === UI.moveModal) UI.moveModal.style.display = 'none'; });
@@ -1016,6 +1129,25 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.resetDataModal.addEventListener('click', (e) => { if(e.target === UI.resetDataModal) UI.resetDataModal.style.display = 'none' });
         
         UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
+    }
+    
+    function handleOpenFullscreen() {
+        UI.fullscreenPromptTitle.textContent = UI.promptTitle.value || 'Editing Prompt';
+        UI.fullscreenPromptTextarea.value = UI.promptBody.value;
+        UI.app.classList.add('fullscreen-active');
+        UI.fullscreenPromptModal.style.display = 'flex';
+        setTimeout(() => UI.fullscreenPromptTextarea.focus(), 50);
+    }
+    
+    function handleCloseFullscreen() {
+        UI.fullscreenPromptModal.style.display = 'none';
+        UI.app.classList.remove('fullscreen-active');
+    }
+    
+    function handleSaveAndCloseFullscreen() {
+        UI.promptBody.value = UI.fullscreenPromptTextarea.value;
+        updateCharCounter();
+        handleCloseFullscreen();
     }
     
     async function handleFolderDropdownChange() {
@@ -1124,6 +1256,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const promptId = Number(li.dataset.id);
         const favoriteToggle = e.target.closest('.favorite-toggle');
         const tag = e.target.closest('.prompt-list-tag');
+        const quickCopyBtn = e.target.closest('.quick-copy-btn');
+        
+        if (quickCopyBtn) {
+            e.stopPropagation();
+            const promptToCopy = state.prompts.find(p => p.id === promptId);
+            if (promptToCopy && navigator.clipboard) {
+                navigator.clipboard.writeText(promptToCopy.body).then(() => {
+                    if (state.quickCopyTimeouts[promptId]) {
+                        clearTimeout(state.quickCopyTimeouts[promptId]);
+                    }
+                    quickCopyBtn.classList.add('copied');
+                    quickCopyBtn.querySelector('.copy-icon').style.display = 'none';
+                    quickCopyBtn.querySelector('.check-icon').style.display = 'block';
+
+                    state.quickCopyTimeouts[promptId] = setTimeout(() => {
+                        quickCopyBtn.classList.remove('copied');
+                        quickCopyBtn.querySelector('.copy-icon').style.display = 'block';
+                        quickCopyBtn.querySelector('.check-icon').style.display = 'none';
+                        delete state.quickCopyTimeouts[promptId];
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            }
+            return;
+        }
 
         if (favoriteToggle) {
             e.stopPropagation();
@@ -1350,12 +1508,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 UI.copyPromptBtn.classList.add('copied');
                 const originalTitle = UI.copyPromptBtn.title;
                 UI.copyPromptBtn.title = 'Copied!';
-                UI.copyPromptBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                UI.copyPromptBtn.querySelector('.copy-icon-svg').style.display = 'none';
+                UI.copyPromptBtn.querySelector('.check-icon-svg').style.display = 'block';
 
                 state.copyTimeout = setTimeout(() => {
                     UI.copyPromptBtn.classList.remove('copied');
                     UI.copyPromptBtn.title = originalTitle;
-                    UI.copyPromptBtn.innerHTML = `<svg class="copy-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                    UI.copyPromptBtn.querySelector('.copy-icon-svg').style.display = 'block';
+                    UI.copyPromptBtn.querySelector('.check-icon-svg').style.display = 'none';
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
