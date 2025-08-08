@@ -20,14 +20,10 @@
         body { font-family: var(--font-main); background-color: var(--bg-deep-space); color: var(--text-primary); }
         #app { display: flex; width: 100%; height: 100dvh; position: relative; }
 
-        /* --- Global Scrollbar Hiding --- */
-        * {
-            scrollbar-width: none; /* Firefox */
-           -ms-overflow-style: none;  /* Internet Explorer 10+ */
-        }
-        *::-webkit-scrollbar {
-            display: none; /* Safari and Chrome */
-        }
+        /* --- Global --- */
+        * { scrollbar-width: none; -ms-overflow-style: none; }
+        *::-webkit-scrollbar { display: none; }
+        input:focus, textarea:focus, select:focus, button:focus { outline: none; }
 
         /* --- Sidebar --- */
         #sidebar {
@@ -260,6 +256,33 @@
         .favorite-toggle:hover { opacity: 0.7; }
         .favorite-toggle.active { opacity: 1; color: var(--primary-accent); }
         .favorite-toggle svg { width: 20px; height: 20px; display: block; }
+        
+        #back-to-top-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 10;
+        }
+        #back-to-top-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        #back-to-top-btn svg { width: 20px; height: 20px; }
 
         #prompt-details-container { flex-grow: 1; padding: 25px; overflow-y: auto; position: relative; display: flex; flex-direction: column;}
         #no-prompt-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: var(--text-secondary); text-align: center; transition: opacity 0.3s ease-out; }
@@ -406,6 +429,17 @@
         #mobile-search-bar { display: none; }
         
         @media (max-width: 768px) {
+            #back-to-top-btn {
+                bottom: 80px;
+                right: 20px;
+                z-index: 1001;
+                transform: scale(0);
+                transition: opacity 0.3s, transform 0.3s;
+            }
+            #back-to-top-btn.visible {
+                transform: scale(1);
+            }
+
             #mobile-search-bar {
                 position: absolute;
                 top: 0;
@@ -461,6 +495,12 @@
                 pointer-events: none;
                 opacity: 0;
             }
+             #app.details-visible-mobile #back-to-top-btn,
+             #app.sidebar-is-open #back-to-top-btn {
+                transform: scale(0) !important;
+                pointer-events: none;
+                opacity: 0;
+             }
             
             #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
 
@@ -597,11 +637,14 @@
                 </div>
             </div>
             <ul id="prompt-list">
-                 <div id="new-prompt-placeholder">
+                <div id="new-prompt-placeholder">
                     <p>No prompts here yet. Let's create one!</p>
                     <button id="new-prompt-placeholder-btn">Create New Prompt</button>
                 </div>
             </ul>
+            <button id="back-to-top-btn" title="Back to Top">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            </button>
         </div>
         <div id="prompt-details-container">
             <div id="no-prompt-selected">
@@ -704,13 +747,24 @@
                 <input type="text" id="rename-folder-input" class="inline-form-input">
             </div>
             <div class="modal-actions" style="justify-content: space-between;">
-                 <button id="save-rename-btn" class="action-btn">Save Name</button>
-                 <button id="cancel-folder-settings-btn" class="io-button">Cancel</button>
+                <button id="save-rename-btn" class="action-btn">Save Name</button>
+                <button id="cancel-folder-settings-btn" class="io-button">Cancel</button>
             </div>
             <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
             <div>
-                 <label style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block;">Danger Zone</label>
-                 <button id="delete-folder-from-settings-btn" class="action-btn" style="background-color: var(--red-accent); width: 100%;">Delete Folder</button>
+                <label style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block;">Danger Zone</label>
+                <button id="delete-folder-from-settings-btn" class="action-btn" style="background-color: var(--red-accent); width: 100%;">Delete Folder</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="exit-confirmation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="modal-title-js">Leave Page?</h3>
+            <p class="modal-message-js">Are you sure you want to leave this page? Any unsaved changes may be lost.</p>
+            <div class="modal-actions">
+                <button class="io-button modal-cancel-js">Stay</button>
+                <button class="action-btn modal-confirm-btn modal-confirm-js danger">Leave</button>
             </div>
         </div>
     </div>
@@ -738,9 +792,11 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarToggle: document.getElementById('sidebar-toggle'),
         mobileNewPromptFab: document.getElementById('mobile-new-prompt-fab'),
         promptList: document.getElementById('prompt-list'),
+        promptListContainer: document.getElementById('prompt-list-container'),
         promptListControls: document.querySelector('.prompt-list-controls'),
         newPromptPlaceholder: document.getElementById('new-prompt-placeholder'),
         promptDetails: document.getElementById('prompt-details'),
+        promptDetailsContainer: document.getElementById('prompt-details-container'),
         noPromptSelected: document.getElementById('no-prompt-selected'),
         promptTitle: document.getElementById('prompt-title'),
         promptBody: document.getElementById('prompt-body'),
@@ -778,6 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
         importFileInput: document.getElementById('import-file-input'),
         exportBtn: document.getElementById('export-btn'),
         resetDataBtn: document.getElementById('reset-data-btn'),
+        backToTopBtn: document.getElementById('back-to-top-btn'),
 
         // Mobile Search
         mobileSearchBtn: document.getElementById('mobile-search-btn'),
@@ -797,6 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveRenameBtn: document.getElementById('save-rename-btn'),
         cancelFolderSettingsBtn: document.getElementById('cancel-folder-settings-btn'),
         deleteFolderFromSettingsBtn: document.getElementById('delete-folder-from-settings-btn'),
+        exitConfirmationModal: document.getElementById('exit-confirmation-modal'),
         
         // Fullscreen Modal
         fullscreenPromptModal: document.getElementById('fullscreen-prompt-modal'),
@@ -813,14 +871,16 @@ document.addEventListener('DOMContentLoaded', () => {
         show: (config) => {
             return new Promise((resolve) => {
                 const modal = config.modalId ? document.getElementById(config.modalId) : UI.genericModal;
+                if (!modal) return resolve(false);
+
                 const modalTitle = modal.querySelector('.modal-title-js') || modal.querySelector('h3');
                 const modalMessage = modal.querySelector('.modal-message-js') || modal.querySelector('p');
                 const modalInput = modal.querySelector('.modal-input-js') || UI.genericModal.querySelector('input');
                 const modalConfirmBtn = modal.querySelector('.modal-confirm-js') || UI.genericModal.querySelector('.modal-confirm-btn');
                 const modalCancelBtn = modal.querySelector('.modal-cancel-js') || UI.genericModal.querySelector('.io-button');
 
-                if(config.title) modalTitle.textContent = config.title;
-                if(config.message) modalMessage.textContent = config.message;
+                if(config.title && modalTitle) modalTitle.textContent = config.title;
+                if(config.message && modalMessage) modalMessage.textContent = config.message;
                 
                 if(modalInput) modalInput.style.display = 'none';
                 if(modalCancelBtn) modalCancelBtn.style.display = 'inline-flex';
@@ -889,9 +949,16 @@ document.addEventListener('DOMContentLoaded', () => {
         copyTimeout: null,
         quickCopyTimeouts: {},
         fullscreenTarget: null,
+        isLeaving: false, // Flag to allow intentional exit
     };
 
-    function init() { loadData(); attachEventListeners(); updateUI(); }
+    function init() { 
+        loadData(); 
+        attachEventListeners(); 
+        updateUI();
+        // Initial history state for navigation handling
+        history.replaceState({ appState: 'base' }, '');
+    }
     function loadData() {
         state.prompts = JSON.parse(localStorage.getItem('prompts')) || [];
         state.folders = JSON.parse(localStorage.getItem('folders')) || [];
@@ -910,7 +977,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPrompts();
         renderPromptDetails(detailsVisible);
         updateBulkActionUI();
-        UI.app.classList.toggle('details-visible-mobile', detailsVisible);
+        
+        UI.app.classList.toggle('sidebar-is-open', UI.sidebar.classList.contains('visible'));
+        UI.app.classList.toggle('details-visible-mobile', detailsVisible && window.innerWidth <= 768);
     }
 
     function renderSidebarNav() {
@@ -936,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span>${folder.name}</span>
                 <div class="folder-meta">
                     <button class="folder-settings-btn" data-folder-id="${folder.id}" title="Folder Settings">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     </button>
                     <span class="item-count">${folderCount}</span>
                 </div>
@@ -1042,11 +1111,41 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.promptFolder.value = currentFolder;
     }
 
-    function openPromptDetailsView(isNew, promptId = null) {
-        const currentActive = UI.promptList.querySelector('li.active');
-        if (currentActive) {
-            currentActive.classList.remove('active');
+    function _internalCloseDetailsView() {
+        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
+
+        if (window.innerWidth > 768) {
+            UI.promptDetails.classList.add('closing');
         }
+
+        UI.app.classList.remove('details-visible-mobile');
+
+        setTimeout(() => {
+            if (window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
+
+            const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
+            if (currentActive) currentActive.classList.remove('active');
+
+            state.isCreatingNew = false;
+            state.currentPromptId = null;
+
+            renderPromptDetails(false);
+        }, animationDuration);
+    }
+    
+    function _internalCloseSidebar() {
+        UI.app.classList.remove('sidebar-is-open');
+        UI.sidebar.classList.remove('visible');
+        UI.sidebarOverlay.classList.remove('visible');
+    }
+
+    function openPromptDetailsView(isNew, promptId = null) {
+        if (window.innerWidth <= 768 && history.state?.appState !== 'details') {
+            history.pushState({ appState: 'details' }, '');
+        }
+
+        const currentActive = UI.promptList.querySelector('li.active');
+        if (currentActive) currentActive.classList.remove('active');
 
         state.isCreatingNew = isNew;
         state.currentPromptId = promptId;
@@ -1062,43 +1161,23 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.promptTitle.focus();
         } else {
             const newActive = UI.promptList.querySelector(`li[data-id="${promptId}"]`);
-            if (newActive) {
-                newActive.classList.add('active');
-            }
+            if (newActive) newActive.classList.add('active');
         }
         
         renderPromptDetails(true);
-
         UI.app.classList.add('details-visible-mobile');
         if (window.innerWidth <= 768) { 
-            UI.app.classList.remove('sidebar-is-open'); 
-            UI.sidebar.classList.remove('visible'); 
+            _internalCloseSidebar();
         }
     }
-
-    function closePromptDetailsView() {
-        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
-        
-        if (window.innerWidth > 768) {
-            UI.promptDetails.classList.add('closing');
+    
+    function openMobileSidebar() {
+        if (window.innerWidth <= 768 && history.state?.appState !== 'sidebar') {
+            history.pushState({ appState: 'sidebar' }, '');
         }
-        
-        UI.app.classList.remove('details-visible-mobile');
-        
-        setTimeout(() => {
-            if(window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
-            
-            const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
-            if (currentActive) {
-                currentActive.classList.remove('active');
-            }
-
-            state.isCreatingNew = false;
-            state.currentPromptId = null;
-            
-            renderPromptDetails(false);
-
-        }, animationDuration);
+        UI.app.classList.add('sidebar-is-open'); 
+        UI.sidebar.classList.add('visible'); 
+        UI.sidebarOverlay.classList.add('visible');
     }
 
     function renderTags() {
@@ -1151,12 +1230,6 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.bulkActionBar.classList.toggle('visible', state.isSelectMode && state.selectedPromptIds.size > 0);
     }
 
-    function closeMobileSidebar() {
-        UI.app.classList.remove('sidebar-is-open');
-        UI.sidebar.classList.remove('visible');
-        UI.sidebarOverlay.classList.remove('visible');
-    }
-
     function showModal(modalElement) {
         modalElement.style.display = 'flex';
         modalElement.classList.add('show');
@@ -1179,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (UI.app.classList.contains('fullscreen-active')) {
                 handleCloseFullscreen();
             } else if (UI.app.classList.contains('details-visible-mobile')) {
-                closePromptDetailsView();
+                history.back(); // Let popstate handle the closing
             } else {
                 openPromptDetailsView(true);
             }
@@ -1228,14 +1301,19 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.importFileInput.addEventListener('change', handleImport);
         UI.exportBtn.addEventListener('click', handleExport);
         UI.resetDataBtn.addEventListener('click', () => showModal(UI.resetDataModal));
+        
+        UI.backToTopBtn.addEventListener('click', () => {
+            UI.promptList.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        UI.promptList.addEventListener('scroll', () => {
+            UI.backToTopBtn.classList.toggle('visible', UI.promptList.scrollTop > 300);
+        });
 
         UI.sidebarToggle.addEventListener('click', e => { 
             e.stopPropagation(); 
-            UI.app.classList.add('sidebar-is-open'); 
-            UI.sidebar.classList.add('visible'); 
-            UI.sidebarOverlay.classList.add('visible');
+            openMobileSidebar();
         });
-        UI.sidebarOverlay.addEventListener('click', closeMobileSidebar);
+        UI.sidebarOverlay.addEventListener('click', () => history.back());
 
         UI.mobileSearchBtn.addEventListener('click', () => {
             UI.mobileSearchBar.classList.add('visible');
@@ -1279,6 +1357,41 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cancel-reset-btn').addEventListener('click', () => hideModal(UI.resetDataModal));
         
         UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
+
+        // History API Listener
+        window.addEventListener('popstate', handlePopState);
+    }
+    
+    function handlePopState(event) {
+        if (window.innerWidth > 768) return;
+
+        const isDetailsOpen = UI.app.classList.contains('details-visible-mobile');
+        const isSidebarOpen = UI.app.classList.contains('sidebar-is-open');
+
+        // This is the key condition: The popstate event happened when no overlay was open.
+        // This means the user used the back button from the main screen.
+        if (!isDetailsOpen && !isSidebarOpen && !state.isLeaving) {
+             history.pushState({ appState: 'base' }, ''); // Re-add the base state to trap the user
+             ModalService.show({ modalId: 'exit-confirmation-modal', danger: true })
+                .then(confirmed => {
+                    if (confirmed) {
+                        state.isLeaving = true;
+                        history.back(); // Allow the real "back" action
+                    }
+                });
+             return;
+        }
+
+        // If we are here, it means the user pressed back while an overlay was open.
+        // We just need to close the top-most overlay.
+        if (isDetailsOpen) {
+            _internalCloseDetailsView();
+        } else if (isSidebarOpen) {
+            _internalCloseSidebar();
+        }
+        
+        // Reset the leaving flag if navigation is happening inside the app
+        state.isLeaving = false;
     }
     
     function handleOpenFullscreen(target) {
@@ -1347,8 +1460,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveData();
+        // If on mobile, go back in history to close the view
+        if (window.innerWidth <= 768 && history.state?.appState === 'details') {
+            history.back();
+        } else {
+            _internalCloseDetailsView();
+        }
         updateUI(); 
-        closePromptDetailsView();
     }
     
     function openFolderSettingsModal(folderId) {
@@ -1415,7 +1533,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const target = e.target.closest('[data-id]');
         if (!target) return;
-        closePromptDetailsView();
+        
+        if(window.innerWidth <= 768 && history.state?.appState) {
+            history.back();
+        } else {
+            _internalCloseDetailsView();
+            _internalCloseSidebar();
+        }
+
         UI.search.value = '';
         const { type, id } = target.dataset;
         if (state.view.type === type && state.view.id.toString() === id) {
@@ -1444,7 +1569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(state.view.id === state.folderToDeleteId) state.view = { type: 'folder', id: 'all' };
         if (state.currentPromptId && !state.prompts.find(p => p.id === state.currentPromptId)) {
             state.currentPromptId = null;
-            closePromptDetailsView();
+            _internalCloseDetailsView();
         }
 
         state.folderToDeleteId = null;
@@ -1565,7 +1690,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirmed) {
             state.prompts = state.prompts.filter(p => !state.selectedPromptIds.has(p.id));
             if (state.selectedPromptIds.has(state.currentPromptId)) {
-                closePromptDetailsView();
+                _internalCloseDetailsView();
             }
             state.selectedPromptIds.clear(); state.isSelectMode = false;
             saveData(); updateUI();
@@ -1584,8 +1709,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const idToDelete = state.currentPromptId;
             state.prompts = state.prompts.filter(p => p.id !== idToDelete);
             saveData();
-            closePromptDetailsView();
-            // A full re-render is needed after deletion
+            
+            if (window.innerWidth <= 768) {
+                history.back();
+            } else {
+                _internalCloseDetailsView();
+            }
+            
             setTimeout(updateUI, 50); 
         }
     }
