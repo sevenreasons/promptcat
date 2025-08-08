@@ -73,7 +73,7 @@
         .sidebar-nav-list li span:first-child { flex-grow: 1; }
         .sidebar-nav-list li:hover { background-color: var(--bg-surface); }
         .sidebar-nav-list li.active { background-color: var(--primary-accent); color: white; }
-        .item-count { font-size: 0.9em; color: var(--text-secondary); opacity: 0.3; transition: display 0.1s ease; }
+        .item-count { font-size: 0.9em; color: var(--text-secondary); opacity: 0.3; transition: opacity 0.2s ease; }
         .sidebar-nav-list li.active .item-count { color: white; opacity: 0.7; }
         
         #tags-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
@@ -82,15 +82,37 @@
         .tag-item.active { background-color: var(--primary-accent); color: white; }
         .tag-item .item-count { opacity: 0.7; }
         
-        .delete-folder-btn {
-            display: none; padding: 2px; border-radius: 4px; cursor: pointer;
+        .folder-meta {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .folder-settings-btn {
+            display: none;
+            padding: 2px; border-radius: 4px; cursor: pointer;
             background: none; border: none; color: var(--text-secondary);
             align-items: center; justify-content: center;
         }
-        #folder-list li:hover .delete-folder-btn { display: flex; }
-        #folder-list li:hover .item-count { display: none; }
-        .delete-folder-btn:hover { color: var(--red-accent); }
-        
+        .folder-settings-btn:hover { color: var(--text-primary); }
+
+        @media (hover: hover) {
+            #folder-list li:hover .folder-settings-btn {
+                display: flex;
+            }
+            #folder-list li:hover .item-count {
+                display: none;
+            }
+        }
+        #folder-list li.active .folder-settings-btn {
+            display: flex;
+            color: white; 
+            opacity: 0.7;
+        }
+        #folder-list li.active .folder-settings-btn:hover {
+            opacity: 1;
+        }
+
         .inline-form-container { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--animation-duration) ease-out; }
         .inline-form-container.visible { grid-template-rows: 1fr; margin-top: 10px; margin-bottom: 10px; }
         .inline-form-content { overflow: hidden; }
@@ -674,6 +696,25 @@
         </div>
     </div>
 
+    <div id="folder-settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="folder-settings-title"></h3>
+            <div class="form-group">
+                <label for="rename-folder-input">Rename Folder</label>
+                <input type="text" id="rename-folder-input" class="inline-form-input">
+            </div>
+            <div class="modal-actions" style="justify-content: space-between;">
+                 <button id="save-rename-btn" class="action-btn">Save Name</button>
+                 <button id="cancel-folder-settings-btn" class="io-button">Cancel</button>
+            </div>
+            <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
+            <div>
+                 <label style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block;">Danger Zone</label>
+                 <button id="delete-folder-from-settings-btn" class="action-btn" style="background-color: var(--red-accent); width: 100%;">Delete Folder</button>
+            </div>
+        </div>
+    </div>
+
     <div id="generic-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="generic-modal-title" class="modal-title-js"></h3>
@@ -697,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarToggle: document.getElementById('sidebar-toggle'),
         mobileNewPromptFab: document.getElementById('mobile-new-prompt-fab'),
         promptList: document.getElementById('prompt-list'),
+        promptListControls: document.querySelector('.prompt-list-controls'),
         newPromptPlaceholder: document.getElementById('new-prompt-placeholder'),
         promptDetails: document.getElementById('prompt-details'),
         noPromptSelected: document.getElementById('no-prompt-selected'),
@@ -749,6 +791,12 @@ document.addEventListener('DOMContentLoaded', () => {
         moveFolderSelect: document.getElementById('move-folder-select'),
         deleteFolderModal: document.getElementById('delete-folder-modal'),
         resetDataModal: document.getElementById('reset-data-modal'),
+        folderSettingsModal: document.getElementById('folder-settings-modal'),
+        folderSettingsTitle: document.getElementById('folder-settings-title'),
+        renameFolderInput: document.getElementById('rename-folder-input'),
+        saveRenameBtn: document.getElementById('save-rename-btn'),
+        cancelFolderSettingsBtn: document.getElementById('cancel-folder-settings-btn'),
+        deleteFolderFromSettingsBtn: document.getElementById('delete-folder-from-settings-btn'),
         
         // Fullscreen Modal
         fullscreenPromptModal: document.getElementById('fullscreen-prompt-modal'),
@@ -792,9 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(modalCancelBtn) modalCancelBtn.textContent = config.cancelBtnText || 'Cancel';
                 if (config.danger && modalConfirmBtn) modalConfirmBtn.classList.add('danger');
 
-                modal.style.display = 'flex';
-                modal.classList.add('show');
-                modal.classList.remove('closing');
+                showModal(modal);
 
                 const onConfirm = () => {
                     cleanup();
@@ -811,16 +857,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const cleanup = (isCancel = false) => {
-                    const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
-                    modal.classList.add('closing');
-                    
-                    setTimeout(() => {
-                        modal.style.display = 'none';
-                        modal.classList.remove('show', 'closing');
-                        if (modalConfirmBtn) modalConfirmBtn.removeEventListener('click', onConfirm);
-                        if (modalCancelBtn) modalCancelBtn.removeEventListener('click', onCancel);
-                        modal.removeEventListener('click', onOverlayClick);
-                    }, animationDuration);
+                    hideModal(modal);
+                    if (modalConfirmBtn) modalConfirmBtn.removeEventListener('click', onConfirm);
+                    if (modalCancelBtn) modalCancelBtn.removeEventListener('click', onCancel);
+                    modal.removeEventListener('click', onOverlayClick);
                 };
 
                 if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', onConfirm);
@@ -845,6 +885,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPromptIds: new Set(),
         sortBy: 'dateCreated_desc',
         folderToDeleteId: null,
+        folderToEditId: null,
         copyTimeout: null,
         quickCopyTimeouts: {},
         fullscreenTarget: null,
@@ -893,10 +934,12 @@ document.addEventListener('DOMContentLoaded', () => {
             li.classList.toggle('active', state.view.type === 'folder' && state.view.id === folder.id);
             li.innerHTML = `
                 <span>${folder.name}</span>
-                <span class="item-count">${folderCount}</span>
-                <button class="delete-folder-btn" data-folder-id="${folder.id}" title="Delete Folder">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
+                <div class="folder-meta">
+                    <button class="folder-settings-btn" data-folder-id="${folder.id}" title="Folder Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <span class="item-count">${folderCount}</span>
+                </div>
             `;
             UI.folderList.appendChild(li);
         });
@@ -1078,14 +1121,30 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadTags(tagsArray) { state.currentTags = [...(tagsArray || [])]; renderTags(); }
     function updateCharCounter() { UI.charCounter.textContent = `${UI.promptBody.value.length} characters`; }
     
-    function toggleSelectMode() { 
-        state.isSelectMode = !state.isSelectMode; 
-        if (!state.isSelectMode) {
-            state.selectedPromptIds.clear();
-        }
+    function toggleSelectMode() {
+        state.isSelectMode = !state.isSelectMode;
         UI.promptListControls.classList.toggle('select-mode-active', state.isSelectMode);
-        updateUI(); 
+
+        if (state.isSelectMode) {
+            // Entering select mode
+            if (state.currentPromptId) {
+                const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
+                if (currentActive) currentActive.classList.remove('active');
+                state.currentPromptId = null;
+                renderPromptDetails(false); // Hide details view
+                UI.app.classList.remove('details-visible-mobile');
+            }
+        } else {
+            // Exiting select mode
+            state.selectedPromptIds.clear();
+            UI.promptList.querySelectorAll('li.selected').forEach(li => {
+                li.classList.remove('selected');
+            });
+        }
+
+        updateBulkActionUI();
     }
+    
     function updateBulkActionUI() {
         UI.selectModeBtn.textContent = state.isSelectMode ? 'Cancel' : 'Select';
         UI.selectAllBtn.classList.toggle('visible', state.isSelectMode);
@@ -1096,6 +1155,21 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.app.classList.remove('sidebar-is-open');
         UI.sidebar.classList.remove('visible');
         UI.sidebarOverlay.classList.remove('visible');
+    }
+
+    function showModal(modalElement) {
+        modalElement.style.display = 'flex';
+        modalElement.classList.add('show');
+        modalElement.classList.remove('closing');
+    }
+
+    function hideModal(modalElement) {
+        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
+        modalElement.classList.add('closing');
+        setTimeout(() => {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show', 'closing');
+        }, animationDuration);
     }
 
     function attachEventListeners() {
@@ -1153,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.importBtn.addEventListener('click', () => UI.importFileInput.click());
         UI.importFileInput.addEventListener('change', handleImport);
         UI.exportBtn.addEventListener('click', handleExport);
-        UI.resetDataBtn.addEventListener('click', () => ModalService.show({ modalId: 'reset-data-modal' }));
+        UI.resetDataBtn.addEventListener('click', () => showModal(UI.resetDataModal));
 
         UI.sidebarToggle.addEventListener('click', e => { 
             e.stopPropagation(); 
@@ -1187,15 +1261,22 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.closeFullscreenBtn.addEventListener('click', handleCloseFullscreen);
         UI.saveAndCloseFullscreenBtn.addEventListener('click', handleSaveAndCloseFullscreen);
 
-        document.getElementById('confirm-move-btn').addEventListener('click', handleConfirmMove);
-        document.getElementById('cancel-move-btn').addEventListener('click', () => ModalService.show({ modalId: 'move-modal' }));
-        
-        document.getElementById('confirm-delete-folder-move-prompts').addEventListener('click', handleDeleteFolderMove);
-        document.getElementById('confirm-delete-folder-and-prompts').addEventListener('click', handleDeleteFolderAndPrompts);
-        document.getElementById('cancel-delete-folder-btn').addEventListener('click', () => ModalService.show({ modalId: 'delete-folder-modal'}));
+        // Folder Settings Modal
+        UI.saveRenameBtn.addEventListener('click', handleRenameFolder);
+        UI.deleteFolderFromSettingsBtn.addEventListener('click', handleDeleteFolderTrigger);
+        UI.cancelFolderSettingsBtn.addEventListener('click', () => hideModal(UI.folderSettingsModal));
+        UI.folderSettingsModal.addEventListener('click', (e) => { if(e.target === UI.folderSettingsModal) hideModal(UI.folderSettingsModal); });
 
-        document.getElementById('confirm-reset-btn').addEventListener('click', handleResetAllData);
-        document.getElementById('cancel-reset-btn').addEventListener('click', () => ModalService.show({ modalId: 'reset-data-modal' }));
+        // Delete Folder Confirmation Modal
+        document.getElementById('confirm-delete-folder-move-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderMove(); });
+        document.getElementById('confirm-delete-folder-and-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderAndPrompts(); });
+        document.getElementById('cancel-delete-folder-btn').addEventListener('click', () => hideModal(UI.deleteFolderModal));
+
+        // Other Modals
+        document.getElementById('confirm-move-btn').addEventListener('click', () => { hideModal(UI.moveModal); handleConfirmMove(); });
+        document.getElementById('cancel-move-btn').addEventListener('click', () => hideModal(UI.moveModal));
+        document.getElementById('confirm-reset-btn').addEventListener('click', () => { hideModal(UI.resetDataModal); handleResetAllData(); });
+        document.getElementById('cancel-reset-btn').addEventListener('click', () => hideModal(UI.resetDataModal));
         
         UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
     }
@@ -1211,24 +1292,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         UI.app.classList.add('fullscreen-active');
-        UI.fullscreenPromptModal.style.display = 'flex';
-        UI.fullscreenPromptModal.classList.add('show');
-        UI.fullscreenPromptModal.classList.remove('closing');
+        showModal(UI.fullscreenPromptModal);
 
         setTimeout(() => UI.fullscreenPromptTextarea.focus(), 50);
     }
     
     function handleCloseFullscreen() {
-        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
-        
-        UI.fullscreenPromptModal.classList.add('closing');
-
-        setTimeout(() => {
-            UI.fullscreenPromptModal.style.display = 'none';
-            UI.fullscreenPromptModal.classList.remove('show', 'closing');
-            UI.app.classList.remove('fullscreen-active');
-            state.fullscreenTarget = null;
-        }, animationDuration);
+        hideModal(UI.fullscreenPromptModal);
+        UI.app.classList.remove('fullscreen-active');
+        state.fullscreenTarget = null;
     }
     
     function handleSaveAndCloseFullscreen() {
@@ -1275,29 +1347,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveData();
-        updateUI(); // Re-render everything to show the new/updated prompt
+        updateUI(); 
         closePromptDetailsView();
     }
     
-    function handleSidebarNavClick(e) {
-        const deleteBtn = e.target.closest('.delete-folder-btn');
-        if (deleteBtn) {
-            e.stopPropagation();
-            state.folderToDeleteId = Number(deleteBtn.dataset.folderId);
-            const folder = state.folders.find(f => f.id === state.folderToDeleteId);
-            if (!folder) return;
-            const promptCount = state.prompts.filter(p => p.folderId === state.folderToDeleteId).length;
-            
-            const modal = UI.deleteFolderModal;
-            modal.querySelector('h3').textContent = `Delete "${folder.name}"`;
-            modal.querySelector('#confirm-delete-folder-move-prompts').style.display = promptCount > 0 ? 'flex' : 'none';
-            modal.querySelector('#confirm-delete-folder-and-prompts').textContent = promptCount > 0 ? `Delete Folder & ${promptCount} Prompts` : `Delete Empty Folder`;
-            modal.querySelector('#confirm-delete-folder-move-prompts').textContent = `Delete Folder & Move ${promptCount} Prompts`
-            modal.querySelector('p').textContent = promptCount > 0 
-                ? `This folder contains ${promptCount} prompt(s). What would you like to do?`
-                : 'Are you sure you want to delete this empty folder?';
+    function openFolderSettingsModal(folderId) {
+        state.folderToEditId = folderId;
+        const folder = state.folders.find(f => f.id === folderId);
+        if (!folder) return;
 
-            ModalService.show({modalId: 'delete-folder-modal'});
+        UI.folderSettingsTitle.textContent = `Settings for "${folder.name}"`;
+        UI.renameFolderInput.value = folder.name;
+        showModal(UI.folderSettingsModal);
+    }
+
+    function handleRenameFolder() {
+        const newName = UI.renameFolderInput.value.trim();
+        if (!newName || !state.folderToEditId) return;
+        
+        const folder = state.folders.find(f => f.id === state.folderToEditId);
+        if (folder) {
+            folder.name = newName;
+            saveData();
+            updateUI();
+            hideModal(UI.folderSettingsModal);
+            state.folderToEditId = null;
+        }
+    }
+
+    function handleDeleteFolderTrigger() {
+        const folderId = state.folderToEditId;
+        if (!folderId) return;
+
+        hideModal(UI.folderSettingsModal);
+        
+        setTimeout(() => {
+            showDeleteConfirmationModal(folderId);
+        }, 150);
+    }
+
+    function showDeleteConfirmationModal(folderId) {
+        state.folderToDeleteId = folderId;
+        const folder = state.folders.find(f => f.id === folderId);
+        if (!folder) return;
+        const promptCount = state.prompts.filter(p => p.folderId === folderId).length;
+
+        const modal = UI.deleteFolderModal;
+        modal.querySelector('h3').textContent = `Delete "${folder.name}"`;
+        modal.querySelector('#confirm-delete-folder-move-prompts').style.display = promptCount > 0 ? 'flex' : 'none';
+        modal.querySelector('#confirm-delete-folder-and-prompts').textContent = promptCount > 0 ? `Delete Folder & ${promptCount} Prompts` : `Delete Empty Folder`;
+        modal.querySelector('#confirm-delete-folder-move-prompts').textContent = `Delete Folder & Move ${promptCount} Prompts`;
+        modal.querySelector('p').textContent = promptCount > 0 
+            ? `This folder contains ${promptCount} prompt(s). What would you like to do?`
+            : 'Are you sure you want to delete this empty folder?';
+
+        showModal(UI.deleteFolderModal);
+    }
+
+    function handleSidebarNavClick(e) {
+        const settingsBtn = e.target.closest('.folder-settings-btn');
+        if (settingsBtn) {
+            e.stopPropagation();
+            const folderId = Number(settingsBtn.dataset.folderId);
+            openFolderSettingsModal(folderId);
             return;
         }
 
@@ -1428,15 +1540,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function handleSelectAll() {
-        const visibleIds = getFilteredAndSortedPrompts().map(p => p.id);
-        const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => state.selectedPromptIds.has(id));
-        
+        const allVisibleItems = Array.from(UI.promptList.querySelectorAll('li'));
+        const allVisibleIds = allVisibleItems.map(li => Number(li.dataset.id));
+        const allVisibleSelected = allVisibleItems.length > 0 && allVisibleItems.every(li => li.classList.contains('selected'));
+
         if (allVisibleSelected) {
-            visibleIds.forEach(id => state.selectedPromptIds.delete(id));
+            allVisibleItems.forEach(li => li.classList.remove('selected'));
+            state.selectedPromptIds.clear();
         } else {
-            visibleIds.forEach(id => state.selectedPromptIds.add(id));
+            allVisibleItems.forEach(li => li.classList.add('selected'));
+            state.selectedPromptIds = new Set(allVisibleIds);
         }
-        renderPrompts();
         updateBulkActionUI();
     }
     
@@ -1481,7 +1595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.moveCount.textContent = state.selectedPromptIds.size;
         UI.moveFolderSelect.innerHTML = `<option value="all">No Folder</option>`;
         state.folders.forEach(folder => UI.moveFolderSelect.innerHTML += `<option value="${folder.id}">${folder.name}</option>`);
-        ModalService.show({modalId: 'move-modal'});
+        showModal(UI.moveModal);
     }
     
     function handleConfirmMove() {
