@@ -495,12 +495,12 @@
                 pointer-events: none;
                 opacity: 0;
             }
-             #app.details-visible-mobile #back-to-top-btn,
-             #app.sidebar-is-open #back-to-top-btn {
+            #app.details-visible-mobile #back-to-top-btn,
+            #app.sidebar-is-open #back-to-top-btn {
                 transform: scale(0) !important;
                 pointer-events: none;
                 opacity: 0;
-             }
+            }
             
             #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn { display: flex; }
 
@@ -784,6 +784,106 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    
+    const DB = (function() {
+        const DB_NAME = 'PromptCatDB';
+        const DB_VERSION = 1;
+        let db;
+
+        const STORES = {
+            PROMPTS: 'prompts',
+            FOLDERS: 'folders',
+            TAGS: 'globalTags',
+        };
+
+        function open() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = event => reject('Error opening database');
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = event => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORES.PROMPTS)) {
+                        db.createObjectStore(STORES.PROMPTS, { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains(STORES.FOLDERS)) {
+                        db.createObjectStore(STORES.FOLDERS, { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains(STORES.TAGS)) {
+                        db.createObjectStore(STORES.TAGS, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        function getAll(storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = event => resolve(event.target.result);
+                request.onerror = event => reject(`Error getting all from ${storeName}`);
+            });
+        }
+
+        function put(storeName, item) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.put(item);
+                request.onsuccess = () => resolve();
+                request.onerror = event => reject(`Error putting item in ${storeName}`);
+            });
+        }
+
+        function bulkPut(storeName, items) {
+            return new Promise((resolve, reject) => {
+                if (items.length === 0) return resolve();
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                items.forEach(item => store.put(item));
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = event => reject(`Error bulk putting items in ${storeName}`);
+            });
+        }
+
+        function remove(storeName, key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.delete(key);
+                request.onsuccess = () => resolve();
+                request.onerror = event => reject(`Error deleting item ${key} from ${storeName}`);
+            });
+        }
+        
+        function bulkRemove(storeName, keys) {
+            return new Promise((resolve, reject) => {
+                if (keys.length === 0) return resolve();
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                keys.forEach(key => store.delete(key));
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = event => reject(`Error bulk deleting from ${storeName}`);
+            });
+        }
+
+        function clear(storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.clear();
+                request.onsuccess = () => resolve();
+                request.onerror = event => reject(`Error clearing store ${storeName}`);
+            });
+        }
+
+        return { open, getAll, put, bulkPut, remove, bulkRemove, clear, STORES };
+    })();
+
     const UI = {
         app: document.getElementById('app'),
         sidebar: document.getElementById('sidebar'),
@@ -835,14 +935,10 @@ document.addEventListener('DOMContentLoaded', () => {
         exportBtn: document.getElementById('export-btn'),
         resetDataBtn: document.getElementById('reset-data-btn'),
         backToTopBtn: document.getElementById('back-to-top-btn'),
-
-        // Mobile Search
         mobileSearchBtn: document.getElementById('mobile-search-btn'),
         mobileSearchBar: document.getElementById('mobile-search-bar'),
         mobileSearchInput: document.getElementById('mobile-search-input'),
         closeSearchBtn: document.getElementById('close-search-btn'),
-        
-        // Modals
         moveModal: document.getElementById('move-modal'),
         moveCount: document.getElementById('move-count'),
         moveFolderSelect: document.getElementById('move-folder-select'),
@@ -855,15 +951,11 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelFolderSettingsBtn: document.getElementById('cancel-folder-settings-btn'),
         deleteFolderFromSettingsBtn: document.getElementById('delete-folder-from-settings-btn'),
         exitConfirmationModal: document.getElementById('exit-confirmation-modal'),
-        
-        // Fullscreen Modal
         fullscreenPromptModal: document.getElementById('fullscreen-prompt-modal'),
         fullscreenPromptTitle: document.getElementById('fullscreen-prompt-title'),
         fullscreenPromptTextarea: document.getElementById('fullscreen-prompt-textarea'),
         closeFullscreenBtn: document.getElementById('close-fullscreen-btn'),
         saveAndCloseFullscreenBtn: document.getElementById('save-and-close-fullscreen-btn'),
-        
-        // Generic Modal
         genericModal: document.getElementById('generic-modal'),
     };
 
@@ -872,57 +964,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return new Promise((resolve) => {
                 const modal = config.modalId ? document.getElementById(config.modalId) : UI.genericModal;
                 if (!modal) return resolve(false);
-
                 const modalTitle = modal.querySelector('.modal-title-js') || modal.querySelector('h3');
                 const modalMessage = modal.querySelector('.modal-message-js') || modal.querySelector('p');
                 const modalInput = modal.querySelector('.modal-input-js') || UI.genericModal.querySelector('input');
                 const modalConfirmBtn = modal.querySelector('.modal-confirm-js') || UI.genericModal.querySelector('.modal-confirm-btn');
                 const modalCancelBtn = modal.querySelector('.modal-cancel-js') || UI.genericModal.querySelector('.io-button');
-
                 if(config.title && modalTitle) modalTitle.textContent = config.title;
                 if(config.message && modalMessage) modalMessage.textContent = config.message;
-                
                 if(modalInput) modalInput.style.display = 'none';
                 if(modalCancelBtn) modalCancelBtn.style.display = 'inline-flex';
                 if(modalConfirmBtn) modalConfirmBtn.classList.remove('danger');
-                
-                if (config.type === 'alert' && modalCancelBtn) {
-                    modalCancelBtn.style.display = 'none';
-                }
-                
+                if (config.type === 'alert' && modalCancelBtn) { modalCancelBtn.style.display = 'none'; }
                 if (config.type === 'prompt' && modalInput) {
                     modalInput.style.display = 'block';
                     modalInput.value = config.defaultValue || '';
                     setTimeout(() => modalInput.focus(), 50);
                 }
-
                 if(modalConfirmBtn) modalConfirmBtn.textContent = config.confirmBtnText || 'OK';
                 if(modalCancelBtn) modalCancelBtn.textContent = config.cancelBtnText || 'Cancel';
                 if (config.danger && modalConfirmBtn) modalConfirmBtn.classList.add('danger');
-
                 showModal(modal);
-
-                const onConfirm = () => {
-                    cleanup();
-                    resolve(config.type === 'prompt' ? modalInput.value : true);
-                };
-
-                const onCancel = () => {
-                    cleanup(true);
-                    resolve(config.type === 'prompt' ? null : false);
-                };
-                
-                const onOverlayClick = (e) => {
-                    if (e.target === modal) onCancel();
-                }
-
+                const onConfirm = () => { cleanup(); resolve(config.type === 'prompt' ? modalInput.value : true); };
+                const onCancel = () => { cleanup(true); resolve(config.type === 'prompt' ? null : false); };
+                const onOverlayClick = (e) => { if (e.target === modal) onCancel(); }
                 const cleanup = (isCancel = false) => {
                     hideModal(modal);
                     if (modalConfirmBtn) modalConfirmBtn.removeEventListener('click', onConfirm);
                     if (modalCancelBtn) modalCancelBtn.removeEventListener('click', onCancel);
                     modal.removeEventListener('click', onOverlayClick);
                 };
-
                 if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', onConfirm);
                 if (modalCancelBtn) modalCancelBtn.addEventListener('click', onCancel);
                 modal.addEventListener('click', onOverlayClick);
@@ -949,25 +1019,21 @@ document.addEventListener('DOMContentLoaded', () => {
         copyTimeout: null,
         quickCopyTimeouts: {},
         fullscreenTarget: null,
-        isLeaving: false, // Flag to allow intentional exit
+        isLeaving: false,
     };
 
-    function init() { 
-        loadData(); 
+    async function init() { 
+        await DB.open();
+        await loadData(); 
         attachEventListeners(); 
         updateUI();
-        // Initial history state for navigation handling
         history.replaceState({ appState: 'base' }, '');
     }
-    function loadData() {
-        state.prompts = JSON.parse(localStorage.getItem('prompts')) || [];
-        state.folders = JSON.parse(localStorage.getItem('folders')) || [];
-        state.globalTags = JSON.parse(localStorage.getItem('globalTags')) || [];
-    }
-    function saveData() {
-        localStorage.setItem('prompts', JSON.stringify(state.prompts));
-        localStorage.setItem('folders', JSON.stringify(state.folders));
-        localStorage.setItem('globalTags', JSON.stringify(state.globalTags));
+    async function loadData() {
+        state.prompts = await DB.getAll(DB.STORES.PROMPTS);
+        state.folders = await DB.getAll(DB.STORES.FOLDERS);
+        const storedTags = await DB.getAll(DB.STORES.TAGS);
+        state.globalTags = storedTags.map(t => t.id); // Convert back to simple array
     }
     
     function updateUI() {
@@ -977,7 +1043,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPrompts();
         renderPromptDetails(detailsVisible);
         updateBulkActionUI();
-        
         UI.app.classList.toggle('sidebar-is-open', UI.sidebar.classList.contains('visible'));
         UI.app.classList.toggle('details-visible-mobile', detailsVisible && window.innerWidth <= 768);
     }
@@ -985,16 +1050,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSidebarNav() {
         const allPromptsCount = state.prompts.length;
         const favoritesCount = state.prompts.filter(p => p.isFavorite).length;
-        
         UI.primaryNavList.innerHTML = `
             <li data-type="folder" data-id="all" class="${state.view.type === 'folder' && state.view.id === 'all' ? 'active' : ''}">
                 <span>All Prompts</span><span class="item-count">${allPromptsCount}</span>
             </li>
             <li data-type="folder" data-id="favorites" class="${state.view.type === 'folder' && state.view.id === 'favorites' ? 'active' : ''}">
                 <span>Favorites</span><span class="item-count">${favoritesCount}</span>
-            </li>
-        `;
-        
+            </li>`;
         UI.folderList.innerHTML = '';
         state.folders.forEach(folder => {
             const folderCount = state.prompts.filter(p => p.folderId === folder.id).length;
@@ -1008,8 +1070,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     </button>
                     <span class="item-count">${folderCount}</span>
-                </div>
-            `;
+                </div>`;
             UI.folderList.appendChild(li);
         });
     }
@@ -1033,7 +1094,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const desktopQuery = UI.search.value.trim().toLowerCase();
         const mobileQuery = UI.mobileSearchInput.value.trim().toLowerCase();
         const query = window.innerWidth <= 768 ? mobileQuery : desktopQuery;
-
         if (query) {
             list = list.filter(p => [p.title, p.body, p.notes, ...(p.tags || [])].join(' ').toLowerCase().includes(query));
             if (state.view.type !== 'search') { state.view = {type: 'search'}; renderSidebarNav(); }
@@ -1043,7 +1103,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.view.id === 'favorites') list = list.filter(p => p.isFavorite);
             else if (state.view.id !== 'all') list = list.filter(p => p.folderId === state.view.id);
         }
-        
         const [sortKey, sortDir] = state.sortBy.split('_');
         list.sort((a, b) => {
             let valA = a[sortKey], valB = b[sortKey];
@@ -1058,15 +1117,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPrompts() {
         UI.promptList.querySelectorAll('li').forEach(li => li.remove());
         const promptsToRender = getFilteredAndSortedPrompts();
-
         UI.newPromptPlaceholder.classList.toggle('visible', promptsToRender.length === 0 && !UI.search.value.trim() && !UI.mobileSearchInput.value.trim());
-        
         promptsToRender.forEach(prompt => {
             const li = document.createElement('li');
             li.dataset.id = prompt.id;
             li.classList.toggle('active', prompt.id === state.currentPromptId && !state.isSelectMode);
             li.classList.toggle('selected', state.isSelectMode && state.selectedPromptIds.has(prompt.id));
-
             li.innerHTML = `
                 <div class="prompt-info">
                     <span class="prompt-list-title">${prompt.title || 'Untitled Prompt'}</span>
@@ -1080,8 +1136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="favorite-toggle ${prompt.isFavorite ? 'active' : ''}" data-id="${prompt.id}" title="Toggle Favorite">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                     </span>
-                </div>
-            `;
+                </div>`;
             UI.promptList.appendChild(li);
         });
     }
@@ -1113,22 +1168,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function _internalCloseDetailsView() {
         const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
-
-        if (window.innerWidth > 768) {
-            UI.promptDetails.classList.add('closing');
-        }
-
+        if (window.innerWidth > 768) { UI.promptDetails.classList.add('closing'); }
         UI.app.classList.remove('details-visible-mobile');
-
         setTimeout(() => {
             if (window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
-
             const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
             if (currentActive) currentActive.classList.remove('active');
-
             state.isCreatingNew = false;
             state.currentPromptId = null;
-
             renderPromptDetails(false);
         }, animationDuration);
     }
@@ -1143,13 +1190,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.innerWidth <= 768 && history.state?.appState !== 'details') {
             history.pushState({ appState: 'details' }, '');
         }
-
         const currentActive = UI.promptList.querySelector('li.active');
         if (currentActive) currentActive.classList.remove('active');
-
         state.isCreatingNew = isNew;
         state.currentPromptId = promptId;
-
         if (isNew) {
             UI.promptTitle.value = ''; UI.promptBody.value = ''; UI.promptNotes.value = '';
             updateCharCounter(); loadTags([]);
@@ -1163,12 +1207,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const newActive = UI.promptList.querySelector(`li[data-id="${promptId}"]`);
             if (newActive) newActive.classList.add('active');
         }
-        
         renderPromptDetails(true);
         UI.app.classList.add('details-visible-mobile');
-        if (window.innerWidth <= 768) { 
-            _internalCloseSidebar();
-        }
+        if (window.innerWidth <= 768) { _internalCloseSidebar(); }
     }
     
     function openMobileSidebar() {
@@ -1203,24 +1244,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleSelectMode() {
         state.isSelectMode = !state.isSelectMode;
         UI.promptListControls.classList.toggle('select-mode-active', state.isSelectMode);
-
         if (state.isSelectMode) {
-            // Entering select mode
             if (state.currentPromptId) {
                 const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
                 if (currentActive) currentActive.classList.remove('active');
                 state.currentPromptId = null;
-                renderPromptDetails(false); // Hide details view
+                renderPromptDetails(false);
                 UI.app.classList.remove('details-visible-mobile');
             }
         } else {
-            // Exiting select mode
             state.selectedPromptIds.clear();
-            UI.promptList.querySelectorAll('li.selected').forEach(li => {
-                li.classList.remove('selected');
-            });
+            UI.promptList.querySelectorAll('li.selected').forEach(li => li.classList.remove('selected'));
         }
-
         updateBulkActionUI();
     }
     
@@ -1247,17 +1282,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function attachEventListeners() {
         UI.newPromptBtn.addEventListener('click', () => openPromptDetailsView(true));
-        
         UI.mobileNewPromptFab.addEventListener('click', () => {
-            if (UI.app.classList.contains('fullscreen-active')) {
-                handleCloseFullscreen();
-            } else if (UI.app.classList.contains('details-visible-mobile')) {
-                history.back(); // Let popstate handle the closing
-            } else {
-                openPromptDetailsView(true);
-            }
+            if (UI.app.classList.contains('fullscreen-active')) handleCloseFullscreen();
+            else if (UI.app.classList.contains('details-visible-mobile')) history.back();
+            else openPromptDetailsView(true);
         });
-
         document.getElementById('new-prompt-placeholder-btn').addEventListener('click', () => openPromptDetailsView(true));
         UI.savePromptBtn.addEventListener('click', handleSavePrompt);
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
@@ -1266,12 +1295,10 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
         UI.expandPromptBtn.addEventListener('click', () => handleOpenFullscreen('prompt'));
         UI.expandNotesBtn.addEventListener('click', () => handleOpenFullscreen('notes'));
-        
         UI.primaryNavList.addEventListener('click', handleSidebarNavClick);
         UI.folderList.addEventListener('click', handleSidebarNavClick);
         UI.tagsList.addEventListener('click', handleSidebarNavClick);
         UI.promptList.addEventListener('click', handlePromptListClick);
-        
         UI.newFolderToggleBtn.addEventListener('click', () => {
             const container = UI.newFolderContainer;
             container.classList.toggle('visible');
@@ -1281,7 +1308,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         UI.addFolderBtn.addEventListener('click', handleAddFolder);
-
         UI.newTagToggleBtn.addEventListener('click', () => {
             const container = UI.newTagContainer;
             container.classList.toggle('visible');
@@ -1291,7 +1317,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         UI.addTagBtn.addEventListener('click', handleAddGlobalTag);
-
         UI.sortBy.addEventListener('change', e => { state.sortBy = e.target.value; renderPrompts(); });
         UI.selectModeBtn.addEventListener('click', toggleSelectMode);
         UI.selectAllBtn.addEventListener('click', handleSelectAll);
@@ -1301,96 +1326,51 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.importFileInput.addEventListener('change', handleImport);
         UI.exportBtn.addEventListener('click', handleExport);
         UI.resetDataBtn.addEventListener('click', () => showModal(UI.resetDataModal));
-        
-        UI.backToTopBtn.addEventListener('click', () => {
-            UI.promptList.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        UI.promptList.addEventListener('scroll', () => {
-            UI.backToTopBtn.classList.toggle('visible', UI.promptList.scrollTop > 300);
-        });
-
-        UI.sidebarToggle.addEventListener('click', e => { 
-            e.stopPropagation(); 
-            openMobileSidebar();
-        });
+        UI.backToTopBtn.addEventListener('click', () => UI.promptList.scrollTo({ top: 0, behavior: 'smooth' }));
+        UI.promptList.addEventListener('scroll', () => UI.backToTopBtn.classList.toggle('visible', UI.promptList.scrollTop > 300));
+        UI.sidebarToggle.addEventListener('click', e => { e.stopPropagation(); openMobileSidebar(); });
         UI.sidebarOverlay.addEventListener('click', () => history.back());
-
-        UI.mobileSearchBtn.addEventListener('click', () => {
-            UI.mobileSearchBar.classList.add('visible');
-            UI.mobileSearchInput.focus();
-        });
-        UI.closeSearchBtn.addEventListener('click', () => {
-            UI.mobileSearchBar.classList.remove('visible');
-            UI.mobileSearchInput.value = '';
-            updateUI();
-        });
-
+        UI.mobileSearchBtn.addEventListener('click', () => { UI.mobileSearchBar.classList.add('visible'); UI.mobileSearchInput.focus(); });
+        UI.closeSearchBtn.addEventListener('click', () => { UI.mobileSearchBar.classList.remove('visible'); UI.mobileSearchInput.value = ''; updateUI(); });
         UI.promptBody.addEventListener('input', updateCharCounter);
         UI.tagsContainer.addEventListener('click', e => { if (e.target.classList.contains('remove-tag')) removeTag(e.target.dataset.tag); else UI.tagsInput.focus(); });
-        
         UI.tagsInput.addEventListener('keydown', handleTagInputKeydown);
         UI.tagsInput.addEventListener('input', handleTagInput);
         UI.tagsInput.addEventListener('focus', () => renderTagSuggestions(UI.tagsInput.value));
         UI.tagsInput.addEventListener('blur', () => { setTimeout(() => UI.tagSuggestions.style.display = 'none', 150); });
         UI.tagSuggestions.addEventListener('mousedown', handleSuggestionClick);
-        
-        // Modal listeners
         UI.fullscreenPromptModal.addEventListener('click', (e) => { if (e.target === UI.fullscreenPromptModal) handleCloseFullscreen(); });
         UI.closeFullscreenBtn.addEventListener('click', handleCloseFullscreen);
         UI.saveAndCloseFullscreenBtn.addEventListener('click', handleSaveAndCloseFullscreen);
-
-        // Folder Settings Modal
         UI.saveRenameBtn.addEventListener('click', handleRenameFolder);
         UI.deleteFolderFromSettingsBtn.addEventListener('click', handleDeleteFolderTrigger);
         UI.cancelFolderSettingsBtn.addEventListener('click', () => hideModal(UI.folderSettingsModal));
         UI.folderSettingsModal.addEventListener('click', (e) => { if(e.target === UI.folderSettingsModal) hideModal(UI.folderSettingsModal); });
-
-        // Delete Folder Confirmation Modal
         document.getElementById('confirm-delete-folder-move-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderMove(); });
         document.getElementById('confirm-delete-folder-and-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderAndPrompts(); });
         document.getElementById('cancel-delete-folder-btn').addEventListener('click', () => hideModal(UI.deleteFolderModal));
-
-        // Other Modals
         document.getElementById('confirm-move-btn').addEventListener('click', () => { hideModal(UI.moveModal); handleConfirmMove(); });
         document.getElementById('cancel-move-btn').addEventListener('click', () => hideModal(UI.moveModal));
         document.getElementById('confirm-reset-btn').addEventListener('click', () => { hideModal(UI.resetDataModal); handleResetAllData(); });
         document.getElementById('cancel-reset-btn').addEventListener('click', () => hideModal(UI.resetDataModal));
-        
         UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
-
-        // History API Listener
         window.addEventListener('popstate', handlePopState);
     }
     
     function handlePopState(event) {
         if (window.innerWidth > 768) return;
-
         const isDetailsOpen = UI.app.classList.contains('details-visible-mobile');
         const isSidebarOpen = UI.app.classList.contains('sidebar-is-open');
-
-        // This is the key condition: The popstate event happened when no overlay was open.
-        // This means the user used the back button from the main screen.
         if (!isDetailsOpen && !isSidebarOpen && !state.isLeaving) {
-             history.pushState({ appState: 'base' }, ''); // Re-add the base state to trap the user
-             ModalService.show({ modalId: 'exit-confirmation-modal', danger: true })
+             history.pushState({ appState: 'base' }, '');
+            ModalService.show({ modalId: 'exit-confirmation-modal', danger: true })
                 .then(confirmed => {
-                    if (confirmed) {
-                        state.isLeaving = true;
-                        history.back(); // Allow the real "back" action
-                    }
+                    if (confirmed) { state.isLeaving = true; history.back(); }
                 });
-             return;
+            return;
         }
-
-        // If we are here, it means the user pressed back while an overlay was open.
-        // We just need to close the top-most overlay.
-        if (isDetailsOpen) {
-            _internalCloseDetailsView();
-        } else if (isSidebarOpen) {
-            _internalCloseSidebar();
-        }
-        
-        // Reset the leaving flag if navigation is happening inside the app
+        if (isDetailsOpen) _internalCloseDetailsView();
+        else if (isSidebarOpen) _internalCloseSidebar();
         state.isLeaving = false;
     }
     
@@ -1403,10 +1383,8 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.fullscreenPromptTitle.textContent = 'Editing Notes';
             UI.fullscreenPromptTextarea.value = UI.promptNotes.value;
         }
-
         UI.app.classList.add('fullscreen-active');
         showModal(UI.fullscreenPromptModal);
-
         setTimeout(() => UI.fullscreenPromptTextarea.focus(), 50);
     }
     
@@ -1430,11 +1408,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (UI.promptFolder.value !== '--create-new--') return;
         const currentSelection = state.currentPromptId ? state.prompts.find(p => p.id === state.currentPromptId).folderId || 'all' : 'all';
         const folderName = await ModalService.prompt('Enter new folder name:', { title: 'Create Folder' });
-
         if (folderName && folderName.trim()) {
             const newFolder = { id: Date.now(), name: folderName.trim() };
+            await DB.put(DB.STORES.FOLDERS, newFolder);
             state.folders.push(newFolder);
-            saveData();
             renderSidebarNav();
             renderFolderDropdown();
             UI.promptFolder.value = newFolder.id;
@@ -1445,27 +1422,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleSavePrompt() {
         const title = UI.promptTitle.value.trim(), body = UI.promptBody.value.trim();
-        if (!title && !body) { 
-            await ModalService.alert("Prompt must have a title or body.", "Cannot Save");
-            return; 
-        }
+        if (!title && !body) { await ModalService.alert("Prompt must have a title or body.", "Cannot Save"); return; }
         const now = Date.now(), folderId = UI.promptFolder.value === 'all' || UI.promptFolder.value === '--create-new--' ? null : Number(UI.promptFolder.value);
-        
+        let promptToSave;
         if (state.currentPromptId && !state.isCreatingNew) {
-            const prompt = state.prompts.find(p => p.id === state.currentPromptId);
-            Object.assign(prompt, { title, body, folderId, notes: UI.promptNotes.value.trim(), tags: state.currentTags, dateModified: now });
+            const existingPrompt = state.prompts.find(p => p.id === state.currentPromptId);
+            promptToSave = { ...existingPrompt, title, body, folderId, notes: UI.promptNotes.value.trim(), tags: state.currentTags, dateModified: now };
+            const index = state.prompts.findIndex(p => p.id === state.currentPromptId);
+            state.prompts[index] = promptToSave;
         } else {
-            const newPrompt = { id: now, dateCreated: now, dateModified: now, title, body, folderId, isFavorite: false, notes: UI.promptNotes.value.trim(), tags: state.currentTags };
-            state.prompts.push(newPrompt);
+            promptToSave = { id: now, dateCreated: now, dateModified: now, title, body, folderId, isFavorite: false, notes: UI.promptNotes.value.trim(), tags: state.currentTags };
+            state.prompts.push(promptToSave);
         }
-        
-        saveData();
-        // If on mobile, go back in history to close the view
-        if (window.innerWidth <= 768 && history.state?.appState === 'details') {
-            history.back();
-        } else {
-            _internalCloseDetailsView();
-        }
+        await DB.put(DB.STORES.PROMPTS, promptToSave);
+        if (window.innerWidth <= 768 && history.state?.appState === 'details') { history.back(); } 
+        else { _internalCloseDetailsView(); }
         updateUI(); 
     }
     
@@ -1473,20 +1444,18 @@ document.addEventListener('DOMContentLoaded', () => {
         state.folderToEditId = folderId;
         const folder = state.folders.find(f => f.id === folderId);
         if (!folder) return;
-
         UI.folderSettingsTitle.textContent = `Settings for "${folder.name}"`;
         UI.renameFolderInput.value = folder.name;
         showModal(UI.folderSettingsModal);
     }
 
-    function handleRenameFolder() {
+    async function handleRenameFolder() {
         const newName = UI.renameFolderInput.value.trim();
         if (!newName || !state.folderToEditId) return;
-        
         const folder = state.folders.find(f => f.id === state.folderToEditId);
         if (folder) {
             folder.name = newName;
-            saveData();
+            await DB.put(DB.STORES.FOLDERS, folder);
             updateUI();
             hideModal(UI.folderSettingsModal);
             state.folderToEditId = null;
@@ -1496,12 +1465,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDeleteFolderTrigger() {
         const folderId = state.folderToEditId;
         if (!folderId) return;
-
         hideModal(UI.folderSettingsModal);
-        
-        setTimeout(() => {
-            showDeleteConfirmationModal(folderId);
-        }, 150);
+        setTimeout(() => showDeleteConfirmationModal(folderId), 150);
     }
 
     function showDeleteConfirmationModal(folderId) {
@@ -1509,16 +1474,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const folder = state.folders.find(f => f.id === folderId);
         if (!folder) return;
         const promptCount = state.prompts.filter(p => p.folderId === folderId).length;
-
         const modal = UI.deleteFolderModal;
         modal.querySelector('h3').textContent = `Delete "${folder.name}"`;
         modal.querySelector('#confirm-delete-folder-move-prompts').style.display = promptCount > 0 ? 'flex' : 'none';
         modal.querySelector('#confirm-delete-folder-and-prompts').textContent = promptCount > 0 ? `Delete Folder & ${promptCount} Prompts` : `Delete Empty Folder`;
         modal.querySelector('#confirm-delete-folder-move-prompts').textContent = `Delete Folder & Move ${promptCount} Prompts`;
-        modal.querySelector('p').textContent = promptCount > 0 
-            ? `This folder contains ${promptCount} prompt(s). What would you like to do?`
-            : 'Are you sure you want to delete this empty folder?';
-
+        modal.querySelector('p').textContent = promptCount > 0 ? `This folder contains ${promptCount} prompt(s). What would you like to do?` : 'Are you sure you want to delete this empty folder?';
         showModal(UI.deleteFolderModal);
     }
 
@@ -1526,21 +1487,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const settingsBtn = e.target.closest('.folder-settings-btn');
         if (settingsBtn) {
             e.stopPropagation();
-            const folderId = Number(settingsBtn.dataset.folderId);
-            openFolderSettingsModal(folderId);
+            openFolderSettingsModal(Number(settingsBtn.dataset.folderId));
             return;
         }
-
         const target = e.target.closest('[data-id]');
         if (!target) return;
-        
-        if(window.innerWidth <= 768 && history.state?.appState) {
-            history.back();
-        } else {
-            _internalCloseDetailsView();
-            _internalCloseSidebar();
-        }
-
+        if(window.innerWidth <= 768 && history.state?.appState) { history.back(); } 
+        else { _internalCloseDetailsView(); _internalCloseSidebar(); }
         UI.search.value = '';
         const { type, id } = target.dataset;
         if (state.view.type === type && state.view.id.toString() === id) {
@@ -1551,123 +1504,109 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
     
-    function handleDeleteFolderMove() {
+    async function handleDeleteFolderMove() {
         if (state.folderToDeleteId === null) return;
-        state.prompts.forEach(p => { if (p.folderId === state.folderToDeleteId) p.folderId = null; });
+        const promptsToUpdate = state.prompts.filter(p => p.folderId === state.folderToDeleteId);
+        promptsToUpdate.forEach(p => p.folderId = null);
+        await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
+        await DB.remove(DB.STORES.FOLDERS, state.folderToDeleteId);
         state.folders = state.folders.filter(f => f.id !== state.folderToDeleteId);
         if(state.view.id === state.folderToDeleteId) state.view = { type: 'folder', id: 'all' };
-        
         state.folderToDeleteId = null;
-        saveData(); updateUI();
+        updateUI();
     }
 
-    function handleDeleteFolderAndPrompts() {
+    async function handleDeleteFolderAndPrompts() {
         if (state.folderToDeleteId === null) return;
+        const promptIdsToDelete = state.prompts.filter(p => p.folderId === state.folderToDeleteId).map(p => p.id);
+        await DB.bulkRemove(DB.STORES.PROMPTS, promptIdsToDelete);
+        await DB.remove(DB.STORES.FOLDERS, state.folderToDeleteId);
         state.prompts = state.prompts.filter(p => p.folderId !== state.folderToDeleteId);
         state.folders = state.folders.filter(f => f.id !== state.folderToDeleteId);
-
         if(state.view.id === state.folderToDeleteId) state.view = { type: 'folder', id: 'all' };
         if (state.currentPromptId && !state.prompts.find(p => p.id === state.currentPromptId)) {
-            state.currentPromptId = null;
-            _internalCloseDetailsView();
+            state.currentPromptId = null; _internalCloseDetailsView();
         }
-
         state.folderToDeleteId = null;
-        saveData(); updateUI();
+        updateUI();
     }
 
-    function handlePromptListClick(e) {
+    async function handlePromptListClick(e) {
         const li = e.target.closest('li[data-id]');
         if (!li) return;
-        
         const promptId = Number(li.dataset.id);
         const favoriteToggle = e.target.closest('.favorite-toggle');
         const tag = e.target.closest('.prompt-list-tag');
         const quickCopyBtn = e.target.closest('.quick-copy-btn');
-        
         if (quickCopyBtn) {
             e.stopPropagation();
             const promptToCopy = state.prompts.find(p => p.id === promptId);
             if (promptToCopy && navigator.clipboard) {
                 navigator.clipboard.writeText(promptToCopy.body).then(() => {
-                    if (state.quickCopyTimeouts[promptId]) {
-                        clearTimeout(state.quickCopyTimeouts[promptId]);
-                    }
+                    if (state.quickCopyTimeouts[promptId]) clearTimeout(state.quickCopyTimeouts[promptId]);
                     quickCopyBtn.classList.add('copied');
                     quickCopyBtn.querySelector('.copy-icon').style.display = 'none';
                     quickCopyBtn.querySelector('.check-icon').style.display = 'block';
-
                     state.quickCopyTimeouts[promptId] = setTimeout(() => {
                         quickCopyBtn.classList.remove('copied');
                         quickCopyBtn.querySelector('.copy-icon').style.display = 'block';
                         quickCopyBtn.querySelector('.check-icon').style.display = 'none';
                         delete state.quickCopyTimeouts[promptId];
                     }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
                 });
             }
             return;
         }
-
         if (favoriteToggle) {
             e.stopPropagation();
             const prompt = state.prompts.find(p => p.id === promptId);
             if (prompt) {
                 prompt.isFavorite = !prompt.isFavorite;
-                saveData();
+                await DB.put(DB.STORES.PROMPTS, prompt);
                 renderSidebarNav();
-                if (state.view.type === 'folder' && state.view.id === 'favorites') {
-                    renderPrompts();
-                } else {
-                    favoriteToggle.classList.toggle('active', prompt.isFavorite);
-                }
+                if (state.view.type === 'folder' && state.view.id === 'favorites') { renderPrompts(); } 
+                else { favoriteToggle.classList.toggle('active', prompt.isFavorite); }
             }
             return;
         }
-
         if (tag) {
             e.stopPropagation();
             const newView = { type: 'tag', id: tag.dataset.tag };
             if (state.view.type === newView.type && state.view.id === newView.id) {
                 state.view = { type: 'folder', id: 'all' };
-            } else {
-                state.view = newView;
-            }
+            } else { state.view = newView; }
             state.currentPromptId = null; UI.search.value = '';
             updateUI();
             return;
         }
-        
         if (state.isSelectMode) {
             li.classList.toggle('selected');
-            if (state.selectedPromptIds.has(promptId)) {
-                state.selectedPromptIds.delete(promptId);
-            } else {
-                state.selectedPromptIds.add(promptId);
-            }
+            if (state.selectedPromptIds.has(promptId)) state.selectedPromptIds.delete(promptId);
+            else state.selectedPromptIds.add(promptId);
             updateBulkActionUI();
         } else {
             openPromptDetailsView(false, promptId);
         }
     }
     
-    function handleAddFolder() {
+    async function handleAddFolder() {
         const folderName = UI.newFolderName.value.trim();
         if (folderName) {
-            state.folders.push({ id: Date.now(), name: folderName });
+            const newFolder = { id: Date.now(), name: folderName };
+            await DB.put(DB.STORES.FOLDERS, newFolder);
+            state.folders.push(newFolder);
             UI.newFolderName.value = ''; UI.newFolderContainer.classList.remove('visible');
-            saveData(); renderSidebarNav();
+            renderSidebarNav();
         }
     }
     
-    function handleAddGlobalTag() {
+    async function handleAddGlobalTag() {
         const tagName = UI.newTagName.value.trim();
         if (tagName) {
             const allTags = new Set([...state.prompts.flatMap(p => p.tags || []), ...state.globalTags]);
             if (!allTags.has(tagName)) {
+                await DB.put(DB.STORES.TAGS, { id: tagName });
                 state.globalTags.push(tagName);
-                saveData();
                 renderSidebarTags();
             }
             UI.newTagName.value = ''; UI.newTagContainer.classList.remove('visible');
@@ -1678,7 +1617,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const allVisibleItems = Array.from(UI.promptList.querySelectorAll('li'));
         const allVisibleIds = allVisibleItems.map(li => Number(li.dataset.id));
         const allVisibleSelected = allVisibleItems.length > 0 && allVisibleItems.every(li => li.classList.contains('selected'));
-
         if (allVisibleSelected) {
             allVisibleItems.forEach(li => li.classList.remove('selected'));
             state.selectedPromptIds.clear();
@@ -1691,41 +1629,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function handleBulkDelete() {
         if (state.selectedPromptIds.size === 0) return;
-        const confirmed = await ModalService.confirm(`Delete ${state.selectedPromptIds.size} selected prompts?`, {
-            title: 'Confirm Deletion',
-            confirmBtnText: 'Delete',
-            danger: true
-        });
-
+        const confirmed = await ModalService.confirm(`Delete ${state.selectedPromptIds.size} selected prompts?`, { title: 'Confirm Deletion', confirmBtnText: 'Delete', danger: true });
         if (confirmed) {
+            const idsToDelete = Array.from(state.selectedPromptIds);
+            await DB.bulkRemove(DB.STORES.PROMPTS, idsToDelete);
             state.prompts = state.prompts.filter(p => !state.selectedPromptIds.has(p.id));
-            if (state.selectedPromptIds.has(state.currentPromptId)) {
-                _internalCloseDetailsView();
-            }
+            if (state.selectedPromptIds.has(state.currentPromptId)) { _internalCloseDetailsView(); }
             state.selectedPromptIds.clear(); state.isSelectMode = false;
-            saveData(); updateUI();
+            updateUI();
         }
     }
 
     async function handleDeletePrompt() {
         if (!state.currentPromptId) return;
-        const confirmed = await ModalService.confirm('Are you sure you want to delete this prompt?', {
-            title: 'Confirm Deletion',
-            confirmBtnText: 'Delete',
-            danger: true
-        });
-
+        const confirmed = await ModalService.confirm('Are you sure you want to delete this prompt?', { title: 'Confirm Deletion', confirmBtnText: 'Delete', danger: true });
         if (confirmed) {
             const idToDelete = state.currentPromptId;
+            await DB.remove(DB.STORES.PROMPTS, idToDelete);
             state.prompts = state.prompts.filter(p => p.id !== idToDelete);
-            saveData();
-            
-            if (window.innerWidth <= 768) {
-                history.back();
-            } else {
-                _internalCloseDetailsView();
-            }
-            
+            if (window.innerWidth <= 768) history.back();
+            else _internalCloseDetailsView();
             setTimeout(updateUI, 50); 
         }
     }
@@ -1738,11 +1661,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showModal(UI.moveModal);
     }
     
-    function handleConfirmMove() {
+    async function handleConfirmMove() {
         const newFolderId = UI.moveFolderSelect.value === 'all' ? null : Number(UI.moveFolderSelect.value);
-        state.prompts.forEach(p => { if(state.selectedPromptIds.has(p.id)) p.folderId = newFolderId; });
+        const promptsToUpdate = state.prompts.filter(p => state.selectedPromptIds.has(p.id));
+        promptsToUpdate.forEach(p => p.folderId = newFolderId);
+        await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
         state.selectedPromptIds.clear(); state.isSelectMode = false;
-        saveData(); updateUI();
+        updateUI();
     }
     
     function handleImport(event) {
@@ -1752,34 +1677,39 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const data = JSON.parse(e.target.result);
                 if (data && Array.isArray(data.prompts) && Array.isArray(data.folders)) {
-                    const confirmed = await ModalService.confirm(
-                        'This will overwrite all current data. This action cannot be undone.', 
-                        { title: 'Confirm Import', confirmBtnText: 'Overwrite', danger: true }
-                    );
+                    const confirmed = await ModalService.confirm('This will overwrite all current data. This action cannot be undone.', { title: 'Confirm Import', confirmBtnText: 'Overwrite', danger: true });
                     if (confirmed) {
-                        state.prompts = data.prompts; state.folders = data.folders;
-                        state.globalTags = data.globalTags || [];
+                        await DB.clear(DB.STORES.PROMPTS);
+                        await DB.clear(DB.STORES.FOLDERS);
+                        await DB.clear(DB.STORES.TAGS);
+                        
+                        await DB.bulkPut(DB.STORES.PROMPTS, data.prompts);
+                        await DB.bulkPut(DB.STORES.FOLDERS, data.folders);
+                        const tagsToStore = (data.globalTags || []).map(tag => ({ id: tag }));
+                        await DB.bulkPut(DB.STORES.TAGS, tagsToStore);
+
                         state.currentPromptId = null; state.isCreatingNew = false; state.view = { type: 'folder', id: 'all' };
-                        saveData(); init(); 
+                        await loadData();
+                        updateUI();
                         await ModalService.alert('Import successful!', 'Success');
                     }
-                } else { 
-                    await ModalService.alert('The selected file has an invalid format.', 'Import Error');
-                }
-            } catch (error) { 
-                await ModalService.alert('An error occurred while reading or parsing the file.', 'Import Error');
-            }
+                } else { await ModalService.alert('The selected file has an invalid format.', 'Import Error'); }
+            } catch (error) { await ModalService.alert('An error occurred while reading or parsing the file.', 'Import Error'); }
         };
         reader.readAsText(file);
         UI.importFileInput.value = '';
     }
 
-    function handleExport() {
+    async function handleExport() {
         if (state.prompts.length === 0 && state.folders.length === 0) {
             ModalService.alert("There's no data to export.", "Export Empty");
             return;
         }
-        const dataToExport = { prompts: state.prompts, folders: state.folders, globalTags: state.globalTags };
+        const dataToExport = { 
+            prompts: await DB.getAll(DB.STORES.PROMPTS),
+            folders: await DB.getAll(DB.STORES.FOLDERS),
+            globalTags: (await DB.getAll(DB.STORES.TAGS)).map(t => t.id)
+        };
         const dataStr = JSON.stringify(dataToExport, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1789,29 +1719,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
     
-    function handleResetAllData() {
-        localStorage.removeItem('prompts');
-        localStorage.removeItem('folders');
-        localStorage.removeItem('globalTags');
+    async function handleResetAllData() {
+        await DB.clear(DB.STORES.PROMPTS);
+        await DB.clear(DB.STORES.FOLDERS);
+        await DB.clear(DB.STORES.TAGS);
         location.reload();
     }
     
     function renderTagSuggestions(inputValue) {
-        if (!inputValue) {
-            UI.tagSuggestions.style.display = 'none';
-            return;
-        }
+        if (!inputValue) { UI.tagSuggestions.style.display = 'none'; return; }
         const allTags = [...new Set([...state.prompts.flatMap(p => p.tags || []), ...state.globalTags])];
-        const suggestions = allTags.filter(tag => 
-            tag.toLowerCase().includes(inputValue.toLowerCase()) && !state.currentTags.includes(tag)
-        );
-
+        const suggestions = allTags.filter(tag => tag.toLowerCase().includes(inputValue.toLowerCase()) && !state.currentTags.includes(tag));
         if (suggestions.length > 0) {
             UI.tagSuggestions.innerHTML = suggestions.map(tag => `<div class="suggestion-item" data-tag="${tag}">${tag}</div>`).join('');
             UI.tagSuggestions.style.display = 'block';
-        } else {
-            UI.tagSuggestions.style.display = 'none';
-        }
+        } else { UI.tagSuggestions.style.display = 'none'; }
     }
 
     function handleSuggestionClick(e) {
@@ -1827,8 +1749,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleTagInput() {
         const value = UI.tagsInput.value;
         if (value.endsWith(',')) {
-            const tagText = value.slice(0, -1);
-            addTag(tagText);
+            addTag(value.slice(0, -1));
             UI.tagsInput.value = '';
         }
         renderTagSuggestions(UI.tagsInput.value);
@@ -1847,13 +1768,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(UI.promptBody.value).then(() => {
                 if(state.copyTimeout) clearTimeout(state.copyTimeout);
-                
                 UI.copyPromptBtn.classList.add('copied');
                 const originalTitle = UI.copyPromptBtn.title;
                 UI.copyPromptBtn.title = 'Copied!';
                 UI.copyPromptBtn.querySelector('.copy-icon-svg').style.display = 'none';
                 UI.copyPromptBtn.querySelector('.check-icon-svg').style.display = 'block';
-
                 state.copyTimeout = setTimeout(() => {
                     UI.copyPromptBtn.classList.remove('copied');
                     UI.copyPromptBtn.title = originalTitle;
@@ -1861,7 +1780,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     UI.copyPromptBtn.querySelector('.check-icon-svg').style.display = 'none';
                 }, 2000);
             }).catch(err => {
-                console.error('Failed to copy text: ', err);
                 ModalService.alert('Could not copy to clipboard.');
             });
         }
