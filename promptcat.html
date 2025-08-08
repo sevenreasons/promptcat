@@ -1613,9 +1613,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (favoriteToggle) {
             e.stopPropagation();
             const prompt = state.prompts.find(p => p.id === promptId);
-            if (prompt) { prompt.isFavorite = !prompt.isFavorite; saveData(); renderPrompts(); renderSidebarNav(); }
+            if (prompt) {
+                prompt.isFavorite = !prompt.isFavorite;
+                saveData();
+                renderSidebarNav();
+                if (state.view.type === 'folder' && state.view.id === 'favorites') {
+                    renderPrompts();
+                } else {
+                    favoriteToggle.classList.toggle('active', prompt.isFavorite);
+                }
+            }
             return;
         }
+
         if (tag) {
             e.stopPropagation();
             const newView = { type: 'tag', id: tag.dataset.tag };
