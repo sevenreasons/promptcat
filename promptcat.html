@@ -66,7 +66,7 @@
             transition: background-color 0.2s ease, color 0.2s ease;
             color: var(--text-secondary); font-weight: 500;
         }
-        .sidebar-nav-list li span:first-child { flex-grow: 1; }
+        .sidebar-nav-list li .item-name { flex-grow: 1; }
         .sidebar-nav-list li:hover { background-color: var(--bg-surface); }
         .sidebar-nav-list li.active { background-color: var(--primary-accent); color: white; }
         .item-count { font-size: 0.9em; color: var(--text-secondary); opacity: 0.3; transition: opacity 0.2s ease; }
@@ -78,7 +78,7 @@
         .tag-item.active { background-color: var(--primary-accent); color: white; }
         .tag-item .item-count { opacity: 0.7; }
         
-        .folder-meta {
+        .folder-meta, .nav-item-meta {
             margin-left: auto;
             display: flex;
             align-items: center;
@@ -91,6 +91,16 @@
             align-items: center; justify-content: center;
         }
         .folder-settings-btn:hover { color: var(--text-primary); }
+        .lock-icon {
+            color: var(--text-secondary);
+            opacity: 0.4;
+            width: 16px;
+            height: 16px;
+        }
+        li.active .lock-icon {
+            color: white;
+            opacity: 0.7;
+        }
 
         @media (hover: hover) {
             #folder-list li:hover .folder-settings-btn {
@@ -244,6 +254,9 @@
         #new-prompt-placeholder-btn:hover { background-color: var(--primary-hover); }
 
         .prompt-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+        .prompt-actions .lock-icon { order: -1; opacity: 0.4; }
+        #prompt-list li.active .prompt-actions .lock-icon, #prompt-list li.selected .prompt-actions .lock-icon { color: white; opacity: 0.8;}
+        
         .quick-copy-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); opacity: 0.3; padding: 5px; border-radius: 5px; line-height: 0; transition: opacity 0.2s, color 0.2s ease; }
         .quick-copy-btn:hover { opacity: 0.7; }
         .quick-copy-btn.copied { color: var(--primary-accent); opacity: 1; }
@@ -295,6 +308,18 @@
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(10px); } }
         }
+
+        .prompt-title-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .prompt-title-header label { font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin: 0; }
+        .lock-switch-container { display: flex; align-items: center; gap: 8px; }
+        .lock-switch-container label { font-size: 0.9em; color: var(--text-secondary); cursor: pointer; }
+        .lock-switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+        .lock-switch input { opacity: 0; width: 0; height: 0; }
+        .lock-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-surface); border: 1px solid var(--border-color); transition: .4s; border-radius: 22px; }
+        .lock-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: var(--text-secondary); transition: .4s; border-radius: 50%; }
+        input:checked + .lock-slider { background-color: var(--primary-accent); border-color: var(--primary-accent); }
+        input:checked + .lock-slider:before { transform: translateX(16px); background-color: white; }
+        input:disabled + .lock-slider { cursor: not-allowed; opacity: 0.5; }
 
         .form-group { position: relative; margin-bottom: 15px; }
         .form-group.grows { flex-grow: 1; display: flex; flex-direction: column; }
@@ -378,7 +403,7 @@
             background-color: rgba(0,0,0,0.6); z-index: 1000;
             justify-content: center; align-items: center;
         }
-        .modal-overlay.show { animation: fadeInModal var(--animation-duration) ease-out; }
+        .modal-overlay.show { display: flex; animation: fadeInModal var(--animation-duration) ease-out; }
         .modal-content { animation: slideInModal var(--animation-duration) ease-out; }
         
         .modal-overlay.closing { animation: fadeOutModal var(--animation-duration) ease-out forwards; }
@@ -567,6 +592,15 @@
 <body>
 
 <div id="app">
+    <!-- SVG ICONS -->
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </symbol>
+      </defs>
+    </svg>
+
     <div id="sidebar">
         <div class="sidebar-header">
             <input type="search" id="search" placeholder="Search prompts...">
@@ -652,7 +686,19 @@
                 <p style="margin-top: 20px;">Select a prompt to view, or create a new one.</p>
             </div>
             <div id="prompt-details">
-                <div class="form-group"> <label for="prompt-title">Title</label> <input type="text" id="prompt-title" placeholder="Prompt Title"> </div>
+                <div class="form-group"> 
+                    <div class="prompt-title-header">
+                        <label for="prompt-title">Title</label> 
+                        <div class="lock-switch-container">
+                            <label for="prompt-lock-switch">Lock</label>
+                            <label class="lock-switch">
+                                <input type="checkbox" id="prompt-lock-switch">
+                                <span class="lock-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <input type="text" id="prompt-title" placeholder="Prompt Title"> 
+                </div>
                 <div class="form-group"> <label for="prompt-folder">Folder</label> <select id="prompt-folder"></select> </div>
                 <div class="form-group grows">
                     <label for="prompt-body">Prompt</label>
@@ -709,6 +755,10 @@
             <h3 class="modal-title-js">Move Prompts</h3>
             <p>Select a destination folder for the <span id="move-count"></span> selected prompts.</p>
             <select id="move-folder-select" class="inline-form-input"></select>
+            <div id="move-password-container" class="form-group" style="display: none; margin-top: 15px;">
+                <label for="move-password-input">Folder Password</label>
+                <input type="password" id="move-password-input" class="inline-form-input" placeholder="Enter password for locked folder">
+            </div>
             <div class="modal-actions">
                 <button id="cancel-move-btn" class="io-button modal-cancel-js">Cancel</button>
                 <button id="confirm-move-btn" class="action-btn modal-confirm-js" style="background-color: var(--primary-accent); color: white;">Move</button>
@@ -746,14 +796,17 @@
                 <label for="rename-folder-input">Rename Folder</label>
                 <input type="text" id="rename-folder-input" class="inline-form-input">
             </div>
-            <div class="modal-actions" style="justify-content: space-between;">
+             <div class="modal-actions" style="justify-content: space-between;">
                 <button id="save-rename-btn" class="action-btn">Save Name</button>
-                <button id="cancel-folder-settings-btn" class="io-button">Cancel</button>
+                 <button id="toggle-lock-folder-btn" class="action-btn">Lock Folder</button>
             </div>
             <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
             <div>
                 <label style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block;">Danger Zone</label>
                 <button id="delete-folder-from-settings-btn" class="action-btn" style="background-color: var(--red-accent); width: 100%;">Delete Folder</button>
+            </div>
+             <div class="modal-actions" style="margin-top: 20px;">
+                <button id="cancel-folder-settings-btn" class="io-button" style="width: 100%">Close</button>
             </div>
         </div>
     </div>
@@ -784,6 +837,88 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+    const CryptoService = {
+        encoder: new TextEncoder(),
+        decoder: new TextDecoder(),
+        
+        _base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        },
+
+        _arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        },
+
+        async _deriveKey(password, salt) {
+            const keyMaterial = await window.crypto.subtle.importKey(
+                "raw", this.encoder.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+            );
+            return window.crypto.subtle.deriveKey(
+                { "name": "PBKDF2", salt: salt, "iterations": 100000, "hash": "SHA-256" },
+                keyMaterial,
+                { "name": "AES-GCM", "length": 256 },
+                true,
+                ["encrypt", "decrypt"]
+            );
+        },
+
+        async encrypt(text, password) {
+            if (!text || !password) return text;
+            try {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const key = await this._deriveKey(password, salt);
+                
+                const encryptedContent = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    this.encoder.encode(text)
+                );
+                
+                return {
+                    ct: this._arrayBufferToBase64(encryptedContent),
+                    iv: this._arrayBufferToBase64(iv),
+                    salt: this._arrayBufferToBase64(salt)
+                };
+            } catch (e) {
+                console.error("Encryption failed", e);
+                return text; // fallback
+            }
+        },
+
+        async decrypt(encryptedData, password) {
+            if (typeof encryptedData !== 'object' || !encryptedData.ct || !password) return encryptedData;
+            try {
+                const salt = this._base64ToArrayBuffer(encryptedData.salt);
+                const iv = this._base64ToArrayBuffer(encryptedData.iv);
+                const key = await this._deriveKey(password, salt);
+
+                const decryptedContent = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    this._base64ToArrayBuffer(encryptedData.ct)
+                );
+
+                return this.decoder.decode(decryptedContent);
+            } catch (e) {
+                console.error("Decryption failed", e);
+                return null; // Return null on failure (e.g., wrong password)
+            }
+        }
+    };
     
     const DB = (function() {
         const DB_NAME = 'PromptCatDB';
@@ -902,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promptBody: document.getElementById('prompt-body'),
         promptNotes: document.getElementById('prompt-notes'),
         promptFolder: document.getElementById('prompt-folder'),
+        promptLockSwitch: document.getElementById('prompt-lock-switch'),
         copyPromptBtn: document.getElementById('copy-prompt-btn'),
         expandPromptBtn: document.getElementById('expand-prompt-btn'),
         expandNotesBtn: document.getElementById('expand-notes-btn'),
@@ -942,12 +1078,15 @@ document.addEventListener('DOMContentLoaded', () => {
         moveModal: document.getElementById('move-modal'),
         moveCount: document.getElementById('move-count'),
         moveFolderSelect: document.getElementById('move-folder-select'),
+        movePasswordContainer: document.getElementById('move-password-container'),
+        movePasswordInput: document.getElementById('move-password-input'),
         deleteFolderModal: document.getElementById('delete-folder-modal'),
         resetDataModal: document.getElementById('reset-data-modal'),
         folderSettingsModal: document.getElementById('folder-settings-modal'),
         folderSettingsTitle: document.getElementById('folder-settings-title'),
         renameFolderInput: document.getElementById('rename-folder-input'),
         saveRenameBtn: document.getElementById('save-rename-btn'),
+        toggleLockFolderBtn: document.getElementById('toggle-lock-folder-btn'),
         cancelFolderSettingsBtn: document.getElementById('cancel-folder-settings-btn'),
         deleteFolderFromSettingsBtn: document.getElementById('delete-folder-from-settings-btn'),
         exitConfirmationModal: document.getElementById('exit-confirmation-modal'),
@@ -963,36 +1102,49 @@ document.addEventListener('DOMContentLoaded', () => {
         show: (config) => {
             return new Promise((resolve) => {
                 const modal = config.modalId ? document.getElementById(config.modalId) : UI.genericModal;
-                if (!modal) return resolve(false);
+                if (!modal || modal.classList.contains('show')) return resolve(false);
+
                 const modalTitle = modal.querySelector('.modal-title-js') || modal.querySelector('h3');
                 const modalMessage = modal.querySelector('.modal-message-js') || modal.querySelector('p');
                 const modalInput = modal.querySelector('.modal-input-js') || UI.genericModal.querySelector('input');
-                const modalConfirmBtn = modal.querySelector('.modal-confirm-js') || UI.genericModal.querySelector('.modal-confirm-btn');
-                const modalCancelBtn = modal.querySelector('.modal-cancel-js') || UI.genericModal.querySelector('.io-button');
+                const modalConfirmBtn = modal.querySelector('.modal-confirm-js');
+                const modalCancelBtn = modal.querySelector('.modal-cancel-js');
+                
                 if(config.title && modalTitle) modalTitle.textContent = config.title;
-                if(config.message && modalMessage) modalMessage.textContent = config.message;
-                if(modalInput) modalInput.style.display = 'none';
+                if(config.message && modalMessage) modalMessage.innerHTML = config.message;
+                
+                modalInput.style.display = 'none';
+                modalInput.type = 'text';
+
                 if(modalCancelBtn) modalCancelBtn.style.display = 'inline-flex';
                 if(modalConfirmBtn) modalConfirmBtn.classList.remove('danger');
                 if (config.type === 'alert' && modalCancelBtn) { modalCancelBtn.style.display = 'none'; }
-                if (config.type === 'prompt' && modalInput) {
+                if (config.type === 'prompt' || config.type === 'password') {
                     modalInput.style.display = 'block';
                     modalInput.value = config.defaultValue || '';
+                    modalInput.placeholder = config.placeholder || '';
+                    modalInput.type = config.type === 'password' ? 'password' : 'text';
                     setTimeout(() => modalInput.focus(), 50);
                 }
+                
                 if(modalConfirmBtn) modalConfirmBtn.textContent = config.confirmBtnText || 'OK';
                 if(modalCancelBtn) modalCancelBtn.textContent = config.cancelBtnText || 'Cancel';
                 if (config.danger && modalConfirmBtn) modalConfirmBtn.classList.add('danger');
+
                 showModal(modal);
-                const onConfirm = () => { cleanup(); resolve(config.type === 'prompt' ? modalInput.value : true); };
-                const onCancel = () => { cleanup(true); resolve(config.type === 'prompt' ? null : false); };
+
+                const onConfirm = () => { cleanup(); resolve(config.type === 'prompt' || config.type === 'password' ? modalInput.value : true); };
+                const onCancel = () => { cleanup(); resolve(config.type === 'prompt' || config.type === 'password' ? null : false); };
                 const onOverlayClick = (e) => { if (e.target === modal) onCancel(); }
-                const cleanup = (isCancel = false) => {
+                
+                let cleanup = () => {
+                    cleanup = () => {}; // Prevent double calls
                     hideModal(modal);
                     if (modalConfirmBtn) modalConfirmBtn.removeEventListener('click', onConfirm);
                     if (modalCancelBtn) modalCancelBtn.removeEventListener('click', onCancel);
                     modal.removeEventListener('click', onOverlayClick);
                 };
+
                 if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', onConfirm);
                 if (modalCancelBtn) modalCancelBtn.addEventListener('click', onCancel);
                 modal.addEventListener('click', onOverlayClick);
@@ -1001,6 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert: (message, title = 'Alert') => ModalService.show({ type: 'alert', title, message, confirmBtnText: 'OK' }),
         confirm: (message, config = {}) => ModalService.show({ type: 'confirm', ...config, message }),
         prompt: (message, config = {}) => ModalService.show({ type: 'prompt', ...config, message }),
+        password: (message, config = {}) => ModalService.show({ type: 'password', ...config, message }),
     };
 
     let state = {
@@ -1020,6 +1173,8 @@ document.addEventListener('DOMContentLoaded', () => {
         quickCopyTimeouts: {},
         fullscreenTarget: null,
         isLeaving: false,
+        sessionPasswords: {}, // { 'folder-123': 'pass', 'prompt-456': 'pass2' }
+        newPromptLockInfo: null, // { password: '...' }
     };
 
     async function init() { 
@@ -1050,12 +1205,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSidebarNav() {
         const allPromptsCount = state.prompts.length;
         const favoritesCount = state.prompts.filter(p => p.isFavorite).length;
+        const lockedPromptsCount = state.prompts.filter(p => p.isLocked || state.folders.find(f => f.id === p.folderId)?.isLocked).length;
+
         UI.primaryNavList.innerHTML = `
             <li data-type="folder" data-id="all" class="${state.view.type === 'folder' && state.view.id === 'all' ? 'active' : ''}">
-                <span>All Prompts</span><span class="item-count">${allPromptsCount}</span>
+                <span class="item-name">All Prompts</span>
+                <div class="nav-item-meta"><span class="item-count">${allPromptsCount}</span></div>
             </li>
             <li data-type="folder" data-id="favorites" class="${state.view.type === 'folder' && state.view.id === 'favorites' ? 'active' : ''}">
-                <span>Favorites</span><span class="item-count">${favoritesCount}</span>
+                <span class="item-name">Favorites</span>
+                <div class="nav-item-meta"><span class="item-count">${favoritesCount}</span></div>
+            </li>
+            <li data-type="folder" data-id="locked" class="${state.view.type === 'folder' && state.view.id === 'locked' ? 'active' : ''}">
+                <span class="item-name">Locked</span>
+                <div class="nav-item-meta"><span class="item-count">${lockedPromptsCount}</span></div>
             </li>`;
         UI.folderList.innerHTML = '';
         state.folders.forEach(folder => {
@@ -1063,11 +1226,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.dataset.type = 'folder'; li.dataset.id = folder.id;
             li.classList.toggle('active', state.view.type === 'folder' && state.view.id === folder.id);
+            const lockIcon = folder.isLocked ? `<svg class="lock-icon"><use href="#icon-lock"></use></svg>` : '';
             li.innerHTML = `
-                <span>${folder.name}</span>
+                <span class="item-name">${folder.name}</span>
                 <div class="folder-meta">
+                    ${lockIcon}
                     <button class="folder-settings-btn" data-folder-id="${folder.id}" title="Folder Settings">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     </button>
                     <span class="item-count">${folderCount}</span>
                 </div>`;
@@ -1095,12 +1260,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const mobileQuery = UI.mobileSearchInput.value.trim().toLowerCase();
         const query = window.innerWidth <= 768 ? mobileQuery : desktopQuery;
         if (query) {
-            list = list.filter(p => [p.title, p.body, p.notes, ...(p.tags || [])].join(' ').toLowerCase().includes(query));
+            list = list.filter(p => {
+                const folder = state.folders.find(f => f.id === p.folderId);
+                const isLocked = (folder && folder.isLocked) || p.isLocked;
+                const searchableBody = isLocked ? '' : (typeof p.body === 'string' ? p.body : '');
+                const searchableNotes = isLocked ? '' : (typeof p.notes === 'string' ? p.notes : '');
+                return [p.title, searchableBody, searchableNotes, ...(p.tags || [])].join(' ').toLowerCase().includes(query);
+            });
             if (state.view.type !== 'search') { state.view = {type: 'search'}; renderSidebarNav(); }
         } else if (state.view.type === 'tag') {
             list = list.filter(p => (p.tags || []).includes(state.view.id));
         } else if (state.view.type === 'folder') {
             if (state.view.id === 'favorites') list = list.filter(p => p.isFavorite);
+            else if (state.view.id === 'locked') list = list.filter(p => p.isLocked || state.folders.find(f => f.id === p.folderId)?.isLocked);
             else if (state.view.id !== 'all') list = list.filter(p => p.folderId === state.view.id);
         }
         const [sortKey, sortDir] = state.sortBy.split('_');
@@ -1123,12 +1295,18 @@ document.addEventListener('DOMContentLoaded', () => {
             li.dataset.id = prompt.id;
             li.classList.toggle('active', prompt.id === state.currentPromptId && !state.isSelectMode);
             li.classList.toggle('selected', state.isSelectMode && state.selectedPromptIds.has(prompt.id));
+
+            const folder = state.folders.find(f => f.id === prompt.folderId);
+            const isLocked = (folder && folder.isLocked) || prompt.isLocked;
+            const lockIcon = isLocked ? `<svg class="lock-icon"><use href="#icon-lock"></use></svg>` : '';
+
             li.innerHTML = `
                 <div class="prompt-info">
                     <span class="prompt-list-title">${prompt.title || 'Untitled Prompt'}</span>
                     <div class="prompt-list-tags">${(prompt.tags || []).map(tag => `<span class="prompt-list-tag" data-tag="${tag}">${tag}</span>`).join('')}</div>
                 </div>
                 <div class="prompt-actions">
+                    ${lockIcon}
                     <button class="quick-copy-btn" title="Copy Prompt" data-id="${prompt.id}">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="check-icon" style="display: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1141,17 +1319,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderPromptDetails(show) {
+    async function renderPromptDetails(show) {
         if (show) {
             UI.noPromptSelected.style.display = 'none';
             UI.promptDetails.style.display = 'flex';
             renderFolderDropdown();
-            const prompt = state.prompts.find(p => p.id === state.currentPromptId);
-            if (prompt) {
-                UI.promptTitle.value = prompt.title; UI.promptBody.value = prompt.body;
-                UI.promptNotes.value = prompt.notes || ''; UI.promptFolder.value = prompt.folderId || 'all';
-                loadTags(prompt.tags || []); updateCharCounter();
+
+            if(state.isCreatingNew) {
+                UI.promptTitle.value = '';
+                UI.promptBody.value = '';
+                UI.promptNotes.value = '';
+                UI.promptFolder.value = (state.view.type === 'folder' && state.view.id !== 'all' && state.view.id !== 'favorites') ? state.view.id : 'all';
+                UI.promptLockSwitch.checked = !!state.newPromptLockInfo;
+                UI.promptLockSwitch.disabled = false;
+                loadTags([]);
+            } else {
+                 const prompt = state.prompts.find(p => p.id === state.currentPromptId);
+                if (prompt) {
+                    const folder = state.folders.find(f => f.id === prompt.folderId);
+                    const isLockedByFolder = folder && folder.isLocked;
+                    const isLockedIndividually = prompt.isLocked;
+                    const isLocked = isLockedByFolder || isLockedIndividually;
+                    
+                    const key = isLockedByFolder ? `folder-${folder.id}` : `prompt-${prompt.id}`;
+                    const password = state.sessionPasswords[key];
+
+                    UI.promptTitle.value = prompt.title;
+                    UI.promptBody.value = isLocked ? await CryptoService.decrypt(prompt.body, password) : prompt.body;
+                    UI.promptNotes.value = isLocked ? await CryptoService.decrypt(prompt.notes, password) : (prompt.notes || '');
+                    UI.promptFolder.value = prompt.folderId || 'all';
+                    
+                    UI.promptLockSwitch.checked = isLockedIndividually;
+                    UI.promptLockSwitch.disabled = isLockedByFolder;
+
+                    loadTags(prompt.tags || []); 
+                }
             }
+            updateCharCounter();
         } else {
             UI.noPromptSelected.style.display = 'flex';
             UI.promptDetails.style.display = 'none';
@@ -1161,7 +1365,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFolderDropdown() {
         const currentFolder = UI.promptFolder.value;
         UI.promptFolder.innerHTML = `<option value="all">No Folder</option>`;
-        state.folders.forEach(folder => UI.promptFolder.innerHTML += `<option value="${folder.id}">${folder.name}</option>`);
+        state.folders.forEach(folder => {
+            const isLocked = folder.isLocked ? '🔓 ' : '';
+            UI.promptFolder.innerHTML += `<option value="${folder.id}">${isLocked}${folder.name}</option>`
+        });
         UI.promptFolder.innerHTML += `<option value="--create-new--" style="color: var(--primary-accent); font-weight: bold;">-- Create New Folder --</option>`;
         UI.promptFolder.value = currentFolder;
     }
@@ -1176,6 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentActive) currentActive.classList.remove('active');
             state.isCreatingNew = false;
             state.currentPromptId = null;
+            state.newPromptLockInfo = null; // Clear lock info for new prompts
             renderPromptDetails(false);
         }, animationDuration);
     }
@@ -1194,16 +1402,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentActive) currentActive.classList.remove('active');
         state.isCreatingNew = isNew;
         state.currentPromptId = promptId;
-        if (isNew) {
-            UI.promptTitle.value = ''; UI.promptBody.value = ''; UI.promptNotes.value = '';
-            updateCharCounter(); loadTags([]);
-            if (state.view.type === 'folder' && state.view.id !== 'all' && state.view.id !== 'favorites') {
-                UI.promptFolder.value = state.view.id;
-            } else {
-                UI.promptFolder.value = 'all';
-            }
-            UI.promptTitle.focus();
-        } else {
+        state.newPromptLockInfo = null;
+        
+        if (!isNew) {
             const newActive = UI.promptList.querySelector(`li[data-id="${promptId}"]`);
             if (newActive) newActive.classList.add('active');
         }
@@ -1266,17 +1467,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showModal(modalElement) {
-        modalElement.style.display = 'flex';
-        modalElement.classList.add('show');
+        if (modalElement.classList.contains('show')) return;
         modalElement.classList.remove('closing');
+        modalElement.style.display = 'flex';
+        // Force a reflow to ensure the animation plays
+        void modalElement.offsetWidth;
+        modalElement.classList.add('show');
     }
 
     function hideModal(modalElement) {
-        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
+        if (!modalElement.classList.contains('show')) return;
+        const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000 || 300;
         modalElement.classList.add('closing');
         setTimeout(() => {
-            modalElement.style.display = 'none';
             modalElement.classList.remove('show', 'closing');
+            modalElement.style.display = 'none';
         }, animationDuration);
     }
 
@@ -1290,6 +1495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('new-prompt-placeholder-btn').addEventListener('click', () => openPromptDetailsView(true));
         UI.savePromptBtn.addEventListener('click', handleSavePrompt);
         UI.deletePromptBtn.addEventListener('click', handleDeletePrompt);
+        UI.promptLockSwitch.addEventListener('change', handlePromptLockToggle);
         UI.search.addEventListener('input', () => updateUI());
         UI.mobileSearchInput.addEventListener('input', () => updateUI());
         UI.copyPromptBtn.addEventListener('click', handleCopyPrompt);
@@ -1343,14 +1549,16 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.closeFullscreenBtn.addEventListener('click', handleCloseFullscreen);
         UI.saveAndCloseFullscreenBtn.addEventListener('click', handleSaveAndCloseFullscreen);
         UI.saveRenameBtn.addEventListener('click', handleRenameFolder);
+        UI.toggleLockFolderBtn.addEventListener('click', handleToggleFolderLock);
         UI.deleteFolderFromSettingsBtn.addEventListener('click', handleDeleteFolderTrigger);
         UI.cancelFolderSettingsBtn.addEventListener('click', () => hideModal(UI.folderSettingsModal));
         UI.folderSettingsModal.addEventListener('click', (e) => { if(e.target === UI.folderSettingsModal) hideModal(UI.folderSettingsModal); });
         document.getElementById('confirm-delete-folder-move-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderMove(); });
         document.getElementById('confirm-delete-folder-and-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderAndPrompts(); });
         document.getElementById('cancel-delete-folder-btn').addEventListener('click', () => hideModal(UI.deleteFolderModal));
-        document.getElementById('confirm-move-btn').addEventListener('click', () => { hideModal(UI.moveModal); handleConfirmMove(); });
+        document.getElementById('confirm-move-btn').addEventListener('click', () => { handleConfirmMove(); });
         document.getElementById('cancel-move-btn').addEventListener('click', () => hideModal(UI.moveModal));
+        UI.moveFolderSelect.addEventListener('change', handleMoveFolderSelectChange);
         document.getElementById('confirm-reset-btn').addEventListener('click', () => { hideModal(UI.resetDataModal); handleResetAllData(); });
         document.getElementById('cancel-reset-btn').addEventListener('click', () => hideModal(UI.resetDataModal));
         UI.promptFolder.addEventListener('change', handleFolderDropdownChange);
@@ -1409,7 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentSelection = state.currentPromptId ? state.prompts.find(p => p.id === state.currentPromptId).folderId || 'all' : 'all';
         const folderName = await ModalService.prompt('Enter new folder name:', { title: 'Create Folder' });
         if (folderName && folderName.trim()) {
-            const newFolder = { id: Date.now(), name: folderName.trim() };
+            const newFolder = { id: Date.now(), name: folderName.trim(), isLocked: false };
             await DB.put(DB.STORES.FOLDERS, newFolder);
             state.folders.push(newFolder);
             renderSidebarNav();
@@ -1421,23 +1629,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleSavePrompt() {
-        const title = UI.promptTitle.value.trim(), body = UI.promptBody.value.trim();
-        if (!title && !body) { await ModalService.alert("Prompt must have a title or body.", "Cannot Save"); return; }
-        const now = Date.now(), folderId = UI.promptFolder.value === 'all' || UI.promptFolder.value === '--create-new--' ? null : Number(UI.promptFolder.value);
-        let promptToSave;
-        if (state.currentPromptId && !state.isCreatingNew) {
-            const existingPrompt = state.prompts.find(p => p.id === state.currentPromptId);
-            promptToSave = { ...existingPrompt, title, body, folderId, notes: UI.promptNotes.value.trim(), tags: state.currentTags, dateModified: now };
-            const index = state.prompts.findIndex(p => p.id === state.currentPromptId);
-            state.prompts[index] = promptToSave;
-        } else {
-            promptToSave = { id: now, dateCreated: now, dateModified: now, title, body, folderId, isFavorite: false, notes: UI.promptNotes.value.trim(), tags: state.currentTags };
-            state.prompts.push(promptToSave);
+        const title = UI.promptTitle.value.trim();
+        const body = UI.promptBody.value;
+        const notes = UI.promptNotes.value.trim();
+
+        if (!title && !body && !notes) {
+            await ModalService.alert("Prompt cannot be completely empty.", "Cannot Save");
+            return;
         }
+
+        const now = Date.now();
+        const folderId = UI.promptFolder.value === 'all' || UI.promptFolder.value === '--create-new--' ? null : Number(UI.promptFolder.value);
+        let promptToSave;
+
+        if (state.isCreatingNew) {
+            promptToSave = { id: now, dateCreated: now, isFavorite: false, isLocked: false };
+            
+            if (state.newPromptLockInfo) {
+                const password = state.newPromptLockInfo.password;
+                promptToSave.isLocked = true;
+                promptToSave.body = await CryptoService.encrypt(body, password);
+                promptToSave.notes = await CryptoService.encrypt(notes, password);
+                promptToSave.passwordCheck = await CryptoService.encrypt(String(promptToSave.id), password);
+            } else {
+                 promptToSave.body = body;
+                 promptToSave.notes = notes;
+            }
+            state.prompts.push(promptToSave);
+        } else {
+            promptToSave = state.prompts.find(p => p.id === state.currentPromptId);
+            const folder = state.folders.find(f => f.id === folderId);
+            const password = state.sessionPasswords[`folder-${folderId}`] || state.sessionPasswords[`prompt-${promptToSave.id}`];
+
+            if (password) {
+                promptToSave.body = await CryptoService.encrypt(body, password);
+                promptToSave.notes = await CryptoService.encrypt(notes, password);
+            } else {
+                promptToSave.body = body;
+                promptToSave.notes = notes;
+            }
+        }
+        
+        promptToSave.title = title;
+        promptToSave.folderId = folderId;
+        promptToSave.tags = state.currentTags;
+        promptToSave.dateModified = now;
+
         await DB.put(DB.STORES.PROMPTS, promptToSave);
-        if (window.innerWidth <= 768 && history.state?.appState === 'details') { history.back(); } 
-        else { _internalCloseDetailsView(); }
-        updateUI(); 
+        
+        if (window.innerWidth <= 768 && history.state?.appState === 'details') {
+            history.back();
+        } else {
+            _internalCloseDetailsView();
+        }
+        updateUI();
     }
     
     function openFolderSettingsModal(folderId) {
@@ -1446,6 +1691,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!folder) return;
         UI.folderSettingsTitle.textContent = `Settings for "${folder.name}"`;
         UI.renameFolderInput.value = folder.name;
+        UI.toggleLockFolderBtn.textContent = folder.isLocked ? 'Unlock Folder' : 'Lock Folder';
         showModal(UI.folderSettingsModal);
     }
 
@@ -1457,8 +1703,7 @@ document.addEventListener('DOMContentLoaded', () => {
             folder.name = newName;
             await DB.put(DB.STORES.FOLDERS, folder);
             updateUI();
-            hideModal(UI.folderSettingsModal);
-            state.folderToEditId = null;
+            UI.renameFolderInput.value = '';
         }
     }
 
@@ -1466,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const folderId = state.folderToEditId;
         if (!folderId) return;
         hideModal(UI.folderSettingsModal);
-        setTimeout(() => showDeleteConfirmationModal(folderId), 150);
+        setTimeout(() => showDeleteConfirmationModal(folderId), 350);
     }
 
     function showDeleteConfirmationModal(folderId) {
@@ -1499,16 +1744,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.view.type === type && state.view.id.toString() === id) {
             state.view = { type: 'folder', id: 'all' };
         } else {
-            state.view = { type, id: (type === 'folder' && id !== 'all' && id !== 'favorites') ? Number(id) : id };
+            state.view = { type, id: (type === 'folder' && !['all', 'favorites', 'locked'].includes(id)) ? Number(id) : id };
         }
         updateUI();
     }
     
     async function handleDeleteFolderMove() {
         if (state.folderToDeleteId === null) return;
+        const folder = state.folders.find(f => f.id === state.folderToDeleteId);
+        
         const promptsToUpdate = state.prompts.filter(p => p.folderId === state.folderToDeleteId);
+        
+        if (folder.isLocked) {
+             const password = await ModalService.password(`Enter password for "${folder.name}" to decrypt prompts before moving.`);
+             if (!password) return;
+             
+             const check = await CryptoService.decrypt(folder.passwordCheck, password);
+             if (check !== String(folder.id)) {
+                 await ModalService.alert("Incorrect password.");
+                 return;
+             }
+
+             for(const p of promptsToUpdate) {
+                p.body = await CryptoService.decrypt(p.body, password);
+                p.notes = await CryptoService.decrypt(p.notes, password);
+             }
+        }
+        
         promptsToUpdate.forEach(p => p.folderId = null);
         await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
+        
         await DB.remove(DB.STORES.FOLDERS, state.folderToDeleteId);
         state.folders = state.folders.filter(f => f.id !== state.folderToDeleteId);
         if(state.view.id === state.folderToDeleteId) state.view = { type: 'folder', id: 'all' };
@@ -1535,38 +1800,56 @@ document.addEventListener('DOMContentLoaded', () => {
         const li = e.target.closest('li[data-id]');
         if (!li) return;
         const promptId = Number(li.dataset.id);
+        const prompt = state.prompts.find(p => p.id === promptId);
+        if(!prompt) return;
+
         const favoriteToggle = e.target.closest('.favorite-toggle');
         const tag = e.target.closest('.prompt-list-tag');
         const quickCopyBtn = e.target.closest('.quick-copy-btn');
         if (quickCopyBtn) {
             e.stopPropagation();
-            const promptToCopy = state.prompts.find(p => p.id === promptId);
-            if (promptToCopy && navigator.clipboard) {
-                navigator.clipboard.writeText(promptToCopy.body).then(() => {
-                    if (state.quickCopyTimeouts[promptId]) clearTimeout(state.quickCopyTimeouts[promptId]);
-                    quickCopyBtn.classList.add('copied');
-                    quickCopyBtn.querySelector('.copy-icon').style.display = 'none';
-                    quickCopyBtn.querySelector('.check-icon').style.display = 'block';
-                    state.quickCopyTimeouts[promptId] = setTimeout(() => {
-                        quickCopyBtn.classList.remove('copied');
-                        quickCopyBtn.querySelector('.copy-icon').style.display = 'block';
-                        quickCopyBtn.querySelector('.check-icon').style.display = 'none';
-                        delete state.quickCopyTimeouts[promptId];
-                    }, 2000);
-                });
+            const folder = state.folders.find(f => f.id === prompt.folderId);
+            const isLocked = (folder && folder.isLocked) || prompt.isLocked;
+
+            let bodyToCopy;
+            if (isLocked) {
+                const password = await ModalService.password('Enter password to copy content:');
+                if (!password) return;
+                
+                const checkString = isLocked && folder?.isLocked ? String(folder.id) : String(prompt.id);
+                const checkValue = isLocked && folder?.isLocked ? folder.passwordCheck : prompt.passwordCheck;
+                const decryptedCheck = await CryptoService.decrypt(checkValue, password);
+
+                if(decryptedCheck !== checkString){
+                    await ModalService.alert('Incorrect password.');
+                    return;
+                }
+                bodyToCopy = await CryptoService.decrypt(prompt.body, password);
+            } else {
+                 bodyToCopy = prompt.body;
             }
+
+            navigator.clipboard.writeText(bodyToCopy).then(() => {
+                if (state.quickCopyTimeouts[promptId]) clearTimeout(state.quickCopyTimeouts[promptId]);
+                quickCopyBtn.classList.add('copied');
+                quickCopyBtn.querySelector('.copy-icon').style.display = 'none';
+                quickCopyBtn.querySelector('.check-icon').style.display = 'block';
+                state.quickCopyTimeouts[promptId] = setTimeout(() => {
+                    quickCopyBtn.classList.remove('copied');
+                    quickCopyBtn.querySelector('.copy-icon').style.display = 'block';
+                    quickCopyBtn.querySelector('.check-icon').style.display = 'none';
+                    delete state.quickCopyTimeouts[promptId];
+                }, 2000);
+            });
             return;
         }
         if (favoriteToggle) {
             e.stopPropagation();
-            const prompt = state.prompts.find(p => p.id === promptId);
-            if (prompt) {
-                prompt.isFavorite = !prompt.isFavorite;
-                await DB.put(DB.STORES.PROMPTS, prompt);
-                renderSidebarNav();
-                if (state.view.type === 'folder' && state.view.id === 'favorites') { renderPrompts(); } 
-                else { favoriteToggle.classList.toggle('active', prompt.isFavorite); }
-            }
+            prompt.isFavorite = !prompt.isFavorite;
+            await DB.put(DB.STORES.PROMPTS, prompt);
+            renderSidebarNav();
+            if (state.view.type === 'folder' && state.view.id === 'favorites') { renderPrompts(); } 
+            else { favoriteToggle.classList.toggle('active', prompt.isFavorite); }
             return;
         }
         if (tag) {
@@ -1579,12 +1862,35 @@ document.addEventListener('DOMContentLoaded', () => {
             updateUI();
             return;
         }
+
         if (state.isSelectMode) {
             li.classList.toggle('selected');
             if (state.selectedPromptIds.has(promptId)) state.selectedPromptIds.delete(promptId);
             else state.selectedPromptIds.add(promptId);
             updateBulkActionUI();
         } else {
+            const folder = state.folders.find(f => f.id === prompt.folderId);
+            const isLockedByFolder = folder && folder.isLocked;
+            const isLockedIndividually = prompt.isLocked;
+            if (isLockedByFolder) {
+                const password = await ModalService.password(`Enter password for folder "${folder.name}":`);
+                if (!password) return;
+                const check = await CryptoService.decrypt(folder.passwordCheck, password);
+                if (check !== String(folder.id)) {
+                    await ModalService.alert('Incorrect password.');
+                    return;
+                }
+                state.sessionPasswords[`folder-${folder.id}`] = password;
+            } else if (isLockedIndividually) {
+                const password = await ModalService.password('Enter password for this prompt:');
+                 if (!password) return;
+                 const check = await CryptoService.decrypt(prompt.passwordCheck, password);
+                if (check !== String(prompt.id)) {
+                    await ModalService.alert('Incorrect password.');
+                    return;
+                }
+                state.sessionPasswords[`prompt-${prompt.id}`] = password;
+            }
             openPromptDetailsView(false, promptId);
         }
     }
@@ -1592,7 +1898,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleAddFolder() {
         const folderName = UI.newFolderName.value.trim();
         if (folderName) {
-            const newFolder = { id: Date.now(), name: folderName };
+            const newFolder = { id: Date.now(), name: folderName, isLocked: false, passwordCheck: null };
             await DB.put(DB.STORES.FOLDERS, newFolder);
             state.folders.push(newFolder);
             UI.newFolderName.value = ''; UI.newFolderContainer.classList.remove('visible');
@@ -1657,16 +1963,84 @@ document.addEventListener('DOMContentLoaded', () => {
         if(state.selectedPromptIds.size === 0) return;
         UI.moveCount.textContent = state.selectedPromptIds.size;
         UI.moveFolderSelect.innerHTML = `<option value="all">No Folder</option>`;
-        state.folders.forEach(folder => UI.moveFolderSelect.innerHTML += `<option value="${folder.id}">${folder.name}</option>`);
+        state.folders.forEach(folder => {
+            const isLocked = folder.isLocked ? '🔓 ' : '';
+            UI.moveFolderSelect.innerHTML += `<option value="${folder.id}">${isLocked}${folder.name}</option>`
+        });
+        handleMoveFolderSelectChange(); // Check if initial selection is locked
         showModal(UI.moveModal);
     }
     
+    function handleMoveFolderSelectChange() {
+        const folderId = UI.moveFolderSelect.value;
+        const folder = state.folders.find(f => f.id == folderId);
+        if (folder && folder.isLocked) {
+            UI.movePasswordContainer.style.display = 'block';
+            UI.movePasswordInput.value = '';
+        } else {
+            UI.movePasswordContainer.style.display = 'none';
+        }
+    }
+
     async function handleConfirmMove() {
+        hideModal(UI.moveModal); // Hide modal first
         const newFolderId = UI.moveFolderSelect.value === 'all' ? null : Number(UI.moveFolderSelect.value);
         const promptsToUpdate = state.prompts.filter(p => state.selectedPromptIds.has(p.id));
-        promptsToUpdate.forEach(p => p.folderId = newFolderId);
+        const destFolder = state.folders.find(f => f.id === newFolderId);
+
+        let destPassword = null;
+        if(destFolder && destFolder.isLocked) {
+            destPassword = UI.movePasswordInput.value;
+            const check = await CryptoService.decrypt(destFolder.passwordCheck, destPassword);
+            if(check !== String(destFolder.id)) {
+                await ModalService.alert("Incorrect password for the destination folder.");
+                return;
+            }
+        }
+        
+        for(const prompt of promptsToUpdate) {
+            const originalFolder = state.folders.find(f => f.id === prompt.folderId);
+            let currentBody = prompt.body;
+            let currentNotes = prompt.notes;
+
+            if (originalFolder && originalFolder.isLocked) {
+                const oldPass = await ModalService.password(`Enter password for "${originalFolder.name}" to move prompt "${prompt.title || 'Untitled'}"`);
+                if (!oldPass) { await ModalService.alert(`Skipping prompt.`); continue; }
+                const check = await CryptoService.decrypt(originalFolder.passwordCheck, oldPass);
+                if (check !== String(originalFolder.id)) {
+                    await ModalService.alert(`Skipping prompt: incorrect password for source folder.`);
+                    continue; 
+                }
+                currentBody = await CryptoService.decrypt(prompt.body, oldPass);
+                currentNotes = await CryptoService.decrypt(prompt.notes, oldPass);
+            } else if (prompt.isLocked) {
+                 const oldPass = await ModalService.password(`Enter password for prompt "${prompt.title || 'Untitled'}"`);
+                 if (!oldPass) { await ModalService.alert(`Skipping prompt.`); continue; }
+                 const check = await CryptoService.decrypt(prompt.passwordCheck, oldPass);
+                 if (check !== String(prompt.id)) {
+                     await ModalService.alert(`Skipping prompt: incorrect password for prompt.`);
+                     continue; 
+                 }
+                currentBody = await CryptoService.decrypt(prompt.body, oldPass);
+                currentNotes = await CryptoService.decrypt(prompt.notes, oldPass);
+            }
+
+            prompt.isLocked = false;
+            prompt.passwordCheck = null;
+
+            if (destPassword) {
+                 prompt.body = await CryptoService.encrypt(currentBody, destPassword);
+                 prompt.notes = await CryptoService.encrypt(currentNotes, destPassword);
+            } else {
+                 prompt.body = currentBody;
+                 prompt.notes = currentNotes;
+            }
+            prompt.folderId = newFolderId;
+        }
+
         await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
-        state.selectedPromptIds.clear(); state.isSelectMode = false;
+        state.selectedPromptIds.clear(); 
+        state.isSelectMode = false;
         updateUI();
     }
     
@@ -1783,6 +2157,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 ModalService.alert('Could not copy to clipboard.');
             });
         }
+    }
+
+    async function handleToggleFolderLock() {
+        const folder = state.folders.find(f => f.id === state.folderToEditId);
+        if(!folder) return;
+
+        hideModal(UI.folderSettingsModal); // Hide first to allow other modals
+
+        if(folder.isLocked) { // Unlock
+            const password = await ModalService.password(`Enter password to unlock "${folder.name}":`);
+            if(!password) return;
+            const check = await CryptoService.decrypt(folder.passwordCheck, password);
+            if(check !== String(folder.id)) {
+                await ModalService.alert("Incorrect password.");
+                return;
+            }
+            folder.isLocked = false;
+            folder.passwordCheck = null;
+            const promptsToUpdate = state.prompts.filter(p => p.folderId === folder.id);
+            for(const p of promptsToUpdate) {
+                p.body = await CryptoService.decrypt(p.body, password);
+                p.notes = await CryptoService.decrypt(p.notes, password);
+            };
+            await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
+            await DB.put(DB.STORES.FOLDERS, folder);
+        } else { // Lock
+            const password = await ModalService.password(`Set a password for "${folder.name}":`);
+            if(!password) return;
+            folder.isLocked = true;
+            folder.passwordCheck = await CryptoService.encrypt(String(folder.id), password);
+            const promptsToUpdate = state.prompts.filter(p => p.folderId === folder.id);
+             for(const p of promptsToUpdate) {
+                p.body = await CryptoService.encrypt(p.body, password);
+                p.notes = await CryptoService.encrypt(p.notes, password);
+            };
+            await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
+            await DB.put(DB.STORES.FOLDERS, folder);
+        }
+        updateUI();
+    }
+
+    async function handlePromptLockToggle(e) {
+        const isChecked = e.target.checked;
+        const prompt = state.isCreatingNew ? {} : state.prompts.find(p => p.id === state.currentPromptId);
+        if(!prompt) {
+             e.target.checked = !isChecked; // revert
+            return;
+        }
+
+        if(isChecked) { // Lock prompt
+            const password = await ModalService.password('Set a password for this prompt:');
+            if(!password) {
+                e.target.checked = false; // revert
+                return;
+            }
+            if (state.isCreatingNew) {
+                state.newPromptLockInfo = { password };
+            } else {
+                prompt.isLocked = true;
+                prompt.passwordCheck = await CryptoService.encrypt(String(prompt.id), password);
+                prompt.body = await CryptoService.encrypt(UI.promptBody.value, password);
+                prompt.notes = await CryptoService.encrypt(UI.promptNotes.value, password);
+                state.sessionPasswords[`prompt-${prompt.id}`] = password;
+                await DB.put(DB.STORES.PROMPTS, prompt);
+                await renderPromptDetails(true);
+            }
+        } else { // Unlock prompt
+            if (state.isCreatingNew) {
+                state.newPromptLockInfo = null;
+            } else {
+                const password = await ModalService.password('Enter password to unlock this prompt:');
+                if(!password) { e.target.checked = true; return; }
+                const check = await CryptoService.decrypt(prompt.passwordCheck, password);
+                if(check !== String(prompt.id)) {
+                    e.target.checked = true; // revert
+                    await ModalService.alert("Incorrect password.");
+                    return;
+                }
+                prompt.isLocked = false;
+                prompt.passwordCheck = null;
+                prompt.body = await CryptoService.decrypt(prompt.body, password);
+                prompt.notes = await CryptoService.decrypt(prompt.notes, password);
+                delete state.sessionPasswords[`prompt-${prompt.id}`];
+                await DB.put(DB.STORES.PROMPTS, prompt);
+                await renderPromptDetails(true);
+            }
+        }
+        updateUI();
     }
 
     init();
