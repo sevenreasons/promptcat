@@ -1,3 +1,5 @@
+<img width="1280" height="640" alt="promptcat" src="https://github.com/user-attachments/assets/e19b2cdf-79cb-4d16-8330-a6b5f0a5f770" />
+
 # promptcat 😼
 
 **promptcat** is a simple, powerful, and private prompt manager designed for simplicity and efficiency. It's a single HTML file with zero dependencies, making it incredibly easy to use and modify. Everything you create is stored locally in your browser's `IndexedDB`, ensuring your data remains completely private.
