@@ -254,7 +254,12 @@
         #new-prompt-placeholder-btn:hover { background-color: var(--primary-hover); }
 
         .prompt-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
-        .prompt-actions .lock-icon { order: -1; opacity: 0.4; }
+        .prompt-actions .lock-icon { 
+            order: -1; 
+            opacity: 0.4;
+            padding: 4px;
+            box-sizing: content-box;
+        }
         #prompt-list li.active .prompt-actions .lock-icon, #prompt-list li.selected .prompt-actions .lock-icon { color: white; opacity: 0.8;}
         
         .quick-copy-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); opacity: 0.3; padding: 5px; border-radius: 5px; line-height: 0; transition: opacity 0.2s, color 0.2s ease; }
@@ -424,6 +429,57 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         #confirm-reset-btn, .modal-confirm-btn.danger { background-color: var(--red-accent); color: white; }
         #confirm-reset-btn:hover, .modal-confirm-btn.danger:hover { background-color: var(--red-hover); }
+
+        .custom-checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 10px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            position: relative;
+        }
+        .custom-checkbox-label input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+        .custom-checkbox-span {
+            height: 20px;
+            width: 20px;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            display: inline-block;
+            position: relative;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .custom-checkbox-label:hover .custom-checkbox-span {
+            border-color: var(--primary-hover);
+        }
+        .custom-checkbox-label input:checked ~ .custom-checkbox-span {
+            background-color: var(--primary-accent);
+            border-color: var(--primary-accent);
+        }
+        .custom-checkbox-span::after {
+            content: "";
+            position: absolute;
+            display: none;
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+        .custom-checkbox-label input:checked ~ .custom-checkbox-span::after {
+            display: block;
+        }
+
 
         #fullscreen-prompt-modal {
             background-color: rgba(18, 16, 25, 0.85); z-index: 2000;
@@ -798,14 +854,14 @@
             </div>
              <div class="modal-actions" style="justify-content: space-between;">
                 <button id="save-rename-btn" class="action-btn">Save Name</button>
-                 <button id="toggle-lock-folder-btn" class="action-btn">Lock Folder</button>
+                <button id="toggle-lock-folder-btn" class="action-btn">Lock Folder</button>
             </div>
             <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
             <div>
                 <label style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; display: block;">Danger Zone</label>
                 <button id="delete-folder-from-settings-btn" class="action-btn" style="background-color: var(--red-accent); width: 100%;">Delete Folder</button>
             </div>
-             <div class="modal-actions" style="margin-top: 20px;">
+            <div class="modal-actions" style="margin-top: 20px;">
                 <button id="cancel-folder-settings-btn" class="io-button" style="width: 100%">Close</button>
             </div>
         </div>
@@ -827,6 +883,14 @@
             <h3 id="generic-modal-title" class="modal-title-js"></h3>
             <p id="generic-modal-message" class="modal-message-js"></p>
             <input type="text" id="generic-modal-input" class="inline-form-input modal-input-js" style="margin-bottom: 20px; display: none;">
+            <div id="generic-modal-error" style="color: var(--red-accent); display: none; margin-top: -15px; margin-bottom: 15px; font-size: 0.9em;"></div>
+            <div id="generic-modal-remember-container" style="display: none; margin-bottom: 20px;">
+                <label for="generic-modal-remember-cb" class="custom-checkbox-label">
+                    <input type="checkbox" id="generic-modal-remember-cb">
+                    <span class="custom-checkbox-span"></span>
+                    <span>Don't ask again for this session</span>
+                </label>
+            </div>
             <div class="modal-actions">
                 <button id="generic-modal-cancel-btn" class="io-button modal-cancel-js">Cancel</button>
                 <button id="generic-modal-confirm-btn" class="action-btn modal-confirm-btn modal-confirm-js">OK</button>
@@ -1109,17 +1173,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const modalInput = modal.querySelector('.modal-input-js') || UI.genericModal.querySelector('input');
                 const modalConfirmBtn = modal.querySelector('.modal-confirm-js');
                 const modalCancelBtn = modal.querySelector('.modal-cancel-js');
-                
+                const errorEl = document.getElementById('generic-modal-error');
+                const rememberContainer = document.getElementById('generic-modal-remember-container');
+                const rememberCb = document.getElementById('generic-modal-remember-cb');
+
                 if(config.title && modalTitle) modalTitle.textContent = config.title;
                 if(config.message && modalMessage) modalMessage.innerHTML = config.message;
                 
+                // Reset fields
+                errorEl.style.display = 'none';
+                rememberContainer.style.display = 'none';
                 modalInput.style.display = 'none';
-                modalInput.type = 'text';
 
                 if(modalCancelBtn) modalCancelBtn.style.display = 'inline-flex';
                 if(modalConfirmBtn) modalConfirmBtn.classList.remove('danger');
                 if (config.type === 'alert' && modalCancelBtn) { modalCancelBtn.style.display = 'none'; }
-                if (config.type === 'prompt' || config.type === 'password') {
+                
+                const needsValidation = config.type === 'password' && typeof config.validate === 'function';
+                const hasInput = config.type === 'prompt' || config.type === 'password';
+
+                if (hasInput) {
                     modalInput.style.display = 'block';
                     modalInput.value = config.defaultValue || '';
                     modalInput.placeholder = config.placeholder || '';
@@ -1127,33 +1200,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => modalInput.focus(), 50);
                 }
                 
+                if (needsValidation) {
+                    rememberContainer.style.display = 'block';
+                    rememberCb.checked = false;
+                }
+
                 if(modalConfirmBtn) modalConfirmBtn.textContent = config.confirmBtnText || 'OK';
                 if(modalCancelBtn) modalCancelBtn.textContent = config.cancelBtnText || 'Cancel';
                 if (config.danger && modalConfirmBtn) modalConfirmBtn.classList.add('danger');
 
                 showModal(modal);
-
-                const onConfirm = () => { cleanup(); resolve(config.type === 'prompt' || config.type === 'password' ? modalInput.value : true); };
-                const onCancel = () => { cleanup(); resolve(config.type === 'prompt' || config.type === 'password' ? null : false); };
+                
+                const onConfirm = async () => {
+                    if (needsValidation) {
+                        const password = modalInput.value;
+                        if (!password) return;
+                        const isValid = await config.validate(password);
+                        if (isValid) {
+                            const remember = rememberCb.checked;
+                            cleanup();
+                            resolve({ password, remember });
+                        } else {
+                            errorEl.textContent = 'Incorrect password, please try again.';
+                            errorEl.style.display = 'block';
+                            modalInput.focus();
+                            modalInput.select();
+                        }
+                    } else if (hasInput) {
+                        cleanup();
+                        resolve(modalInput.value);
+                    } else {
+                        cleanup();
+                        resolve(true);
+                    }
+                };
+                const onCancel = () => { cleanup(); resolve(hasInput ? null : false); };
                 const onOverlayClick = (e) => { if (e.target === modal) onCancel(); }
                 
                 let cleanup = () => {
                     cleanup = () => {}; // Prevent double calls
                     hideModal(modal);
-                    if (modalConfirmBtn) modalConfirmBtn.removeEventListener('click', onConfirm);
-                    if (modalCancelBtn) modalCancelBtn.removeEventListener('click', onCancel);
+                    modalConfirmBtn.removeEventListener('click', onConfirm);
+                    modalCancelBtn.removeEventListener('click', onCancel);
                     modal.removeEventListener('click', onOverlayClick);
                 };
 
-                if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', onConfirm);
-                if (modalCancelBtn) modalCancelBtn.addEventListener('click', onCancel);
+                modalConfirmBtn.addEventListener('click', onConfirm);
+                modalCancelBtn.addEventListener('click', onCancel);
                 modal.addEventListener('click', onOverlayClick);
             });
         },
         alert: (message, title = 'Alert') => ModalService.show({ type: 'alert', title, message, confirmBtnText: 'OK' }),
         confirm: (message, config = {}) => ModalService.show({ type: 'confirm', ...config, message }),
         prompt: (message, config = {}) => ModalService.show({ type: 'prompt', ...config, message }),
-        password: (message, config = {}) => ModalService.show({ type: 'password', ...config, message }),
+        password: (message, config = {}) => ModalService.show({ type: 'password', ...config, message, title: config.title || 'Password Required' }),
     };
 
     let state = {
@@ -1174,6 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fullscreenTarget: null,
         isLeaving: false,
         sessionPasswords: {}, // { 'folder-123': 'pass', 'prompt-456': 'pass2' }
+        decryptedCache: {}, // { 12345: { body: '...', notes: '...' } }
         newPromptLockInfo: null, // { password: '...' }
     };
 
@@ -1262,10 +1363,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (query) {
             list = list.filter(p => {
                 const folder = state.folders.find(f => f.id === p.folderId);
-                const isLocked = (folder && folder.isLocked) || p.isLocked;
-                const searchableBody = isLocked ? '' : (typeof p.body === 'string' ? p.body : '');
-                const searchableNotes = isLocked ? '' : (typeof p.notes === 'string' ? p.notes : '');
-                return [p.title, searchableBody, searchableNotes, ...(p.tags || [])].join(' ').toLowerCase().includes(query);
+                const isLockedByDB = (folder && folder.isLocked) || p.isLocked;
+                
+                let searchableBody = '';
+                let searchableNotes = '';
+
+                if (!isLockedByDB) {
+                    searchableBody = p.body || '';
+                    searchableNotes = p.notes || '';
+                } else {
+                    const cachedData = state.decryptedCache[p.id];
+                    if (cachedData) {
+                        searchableBody = cachedData.body || '';
+                        searchableNotes = cachedData.notes || '';
+                    }
+                }
+
+                return [p.title, searchableBody, searchableNotes, ...(p.tags || [])]
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(query);
             });
             if (state.view.type !== 'search') { state.view = {type: 'search'}; renderSidebarNav(); }
         } else if (state.view.type === 'tag') {
@@ -1319,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function renderPromptDetails(show) {
+    async function renderPromptDetails(show, temporaryPassword = null) {
         if (show) {
             UI.noPromptSelected.style.display = 'none';
             UI.promptDetails.style.display = 'flex';
@@ -1334,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 UI.promptLockSwitch.disabled = false;
                 loadTags([]);
             } else {
-                 const prompt = state.prompts.find(p => p.id === state.currentPromptId);
+                const prompt = state.prompts.find(p => p.id === state.currentPromptId);
                 if (prompt) {
                     const folder = state.folders.find(f => f.id === prompt.folderId);
                     const isLockedByFolder = folder && folder.isLocked;
@@ -1342,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isLocked = isLockedByFolder || isLockedIndividually;
                     
                     const key = isLockedByFolder ? `folder-${folder.id}` : `prompt-${prompt.id}`;
-                    const password = state.sessionPasswords[key];
+                    const password = temporaryPassword || state.sessionPasswords[key];
 
                     UI.promptTitle.value = prompt.title;
                     UI.promptBody.value = isLocked ? await CryptoService.decrypt(prompt.body, password) : prompt.body;
@@ -1394,7 +1511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.sidebarOverlay.classList.remove('visible');
     }
 
-    function openPromptDetailsView(isNew, promptId = null) {
+    function openPromptDetailsView(isNew, promptId = null, temporaryPassword = null) {
         if (window.innerWidth <= 768 && history.state?.appState !== 'details') {
             history.pushState({ appState: 'details' }, '');
         }
@@ -1408,7 +1525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newActive = UI.promptList.querySelector(`li[data-id="${promptId}"]`);
             if (newActive) newActive.classList.add('active');
         }
-        renderPromptDetails(true);
+        renderPromptDetails(true, temporaryPassword);
         UI.app.classList.add('details-visible-mobile');
         if (window.innerWidth <= 768) { _internalCloseSidebar(); }
     }
@@ -1470,7 +1587,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalElement.classList.contains('show')) return;
         modalElement.classList.remove('closing');
         modalElement.style.display = 'flex';
-        // Force a reflow to ensure the animation plays
         void modalElement.offsetWidth;
         modalElement.classList.add('show');
     }
@@ -1570,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isDetailsOpen = UI.app.classList.contains('details-visible-mobile');
         const isSidebarOpen = UI.app.classList.contains('sidebar-is-open');
         if (!isDetailsOpen && !isSidebarOpen && !state.isLeaving) {
-             history.pushState({ appState: 'base' }, '');
+            history.pushState({ appState: 'base' }, '');
             ModalService.show({ modalId: 'exit-confirmation-modal', danger: true })
                 .then(confirmed => {
                     if (confirmed) { state.isLeaving = true; history.back(); }
@@ -1652,8 +1768,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 promptToSave.notes = await CryptoService.encrypt(notes, password);
                 promptToSave.passwordCheck = await CryptoService.encrypt(String(promptToSave.id), password);
             } else {
-                 promptToSave.body = body;
-                 promptToSave.notes = notes;
+                promptToSave.body = body;
+                promptToSave.notes = notes;
             }
             state.prompts.push(promptToSave);
         } else {
@@ -1756,19 +1872,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const promptsToUpdate = state.prompts.filter(p => p.folderId === state.folderToDeleteId);
         
         if (folder.isLocked) {
-             const password = await ModalService.password(`Enter password for "${folder.name}" to decrypt prompts before moving.`);
-             if (!password) return;
-             
-             const check = await CryptoService.decrypt(folder.passwordCheck, password);
-             if (check !== String(folder.id)) {
-                 await ModalService.alert("Incorrect password.");
-                 return;
-             }
+            const password = await ModalService.password(`Enter password for "${folder.name}" to decrypt prompts before moving.`);
+            if (!password) return;
+            
+            const check = await CryptoService.decrypt(folder.passwordCheck, password);
+            if (check !== String(folder.id)) {
+                await ModalService.alert("Incorrect password.");
+                return;
+            }
 
-             for(const p of promptsToUpdate) {
+            for(const p of promptsToUpdate) {
                 p.body = await CryptoService.decrypt(p.body, password);
                 p.notes = await CryptoService.decrypt(p.notes, password);
-             }
+            }
         }
         
         promptsToUpdate.forEach(p => p.folderId = null);
@@ -1826,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 bodyToCopy = await CryptoService.decrypt(prompt.body, password);
             } else {
-                 bodyToCopy = prompt.body;
+                bodyToCopy = prompt.body;
             }
 
             navigator.clipboard.writeText(bodyToCopy).then(() => {
@@ -1872,26 +1988,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const folder = state.folders.find(f => f.id === prompt.folderId);
             const isLockedByFolder = folder && folder.isLocked;
             const isLockedIndividually = prompt.isLocked;
-            if (isLockedByFolder) {
-                const password = await ModalService.password(`Enter password for folder "${folder.name}":`);
-                if (!password) return;
-                const check = await CryptoService.decrypt(folder.passwordCheck, password);
-                if (check !== String(folder.id)) {
-                    await ModalService.alert('Incorrect password.');
+            const isLocked = isLockedByFolder || isLockedIndividually;
+
+            if (isLocked) {
+                const item = isLockedByFolder ? folder : prompt;
+                const itemType = isLockedByFolder ? 'folder' : 'prompt';
+                const key = `${itemType}-${item.id}`;
+
+                if (state.sessionPasswords[key]) {
+                    openPromptDetailsView(false, promptId);
                     return;
                 }
-                state.sessionPasswords[`folder-${folder.id}`] = password;
-            } else if (isLockedIndividually) {
-                const password = await ModalService.password('Enter password for this prompt:');
-                 if (!password) return;
-                 const check = await CryptoService.decrypt(prompt.passwordCheck, password);
-                if (check !== String(prompt.id)) {
-                    await ModalService.alert('Incorrect password.');
-                    return;
+                
+                const result = await ModalService.password(`Enter password for ${itemType} "${item.name || item.title}"`, {
+                    validate: async (password) => {
+                        if (!password) return false;
+                        const check = await CryptoService.decrypt(item.passwordCheck, password);
+                        return check === String(item.id);
+                    }
+                });
+
+                if (result) {
+                    if (result.remember) {
+                        state.sessionPasswords[key] = result.password;
+                    }
+                    
+                    if (isLockedByFolder) {
+                        const promptsToCache = state.prompts.filter(p => p.folderId === folder.id);
+                        for (const p of promptsToCache) {
+                            const body = await CryptoService.decrypt(p.body, result.password);
+                            const notes = await CryptoService.decrypt(p.notes, result.password);
+                            state.decryptedCache[p.id] = { body, notes };
+                        }
+                    } else { // Locked individually
+                        const body = await CryptoService.decrypt(prompt.body, result.password);
+                        const notes = await CryptoService.decrypt(prompt.notes, result.password);
+                        state.decryptedCache[prompt.id] = { body, notes };
+                    }
+                    
+                    openPromptDetailsView(false, promptId, result.password);
                 }
-                state.sessionPasswords[`prompt-${prompt.id}`] = password;
+            } else {
+                openPromptDetailsView(false, promptId);
             }
-            openPromptDetailsView(false, promptId);
         }
     }
     
@@ -2014,13 +2153,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentBody = await CryptoService.decrypt(prompt.body, oldPass);
                 currentNotes = await CryptoService.decrypt(prompt.notes, oldPass);
             } else if (prompt.isLocked) {
-                 const oldPass = await ModalService.password(`Enter password for prompt "${prompt.title || 'Untitled'}"`);
-                 if (!oldPass) { await ModalService.alert(`Skipping prompt.`); continue; }
-                 const check = await CryptoService.decrypt(prompt.passwordCheck, oldPass);
-                 if (check !== String(prompt.id)) {
-                     await ModalService.alert(`Skipping prompt: incorrect password for prompt.`);
-                     continue; 
-                 }
+                const oldPass = await ModalService.password(`Enter password for prompt "${prompt.title || 'Untitled'}"`);
+                if (!oldPass) { await ModalService.alert(`Skipping prompt.`); continue; }
+                const check = await CryptoService.decrypt(prompt.passwordCheck, oldPass);
+                if (check !== String(prompt.id)) {
+                    await ModalService.alert(`Skipping prompt: incorrect password for prompt.`);
+                    continue; 
+                }
                 currentBody = await CryptoService.decrypt(prompt.body, oldPass);
                 currentNotes = await CryptoService.decrypt(prompt.notes, oldPass);
             }
@@ -2029,11 +2168,11 @@ document.addEventListener('DOMContentLoaded', () => {
             prompt.passwordCheck = null;
 
             if (destPassword) {
-                 prompt.body = await CryptoService.encrypt(currentBody, destPassword);
-                 prompt.notes = await CryptoService.encrypt(currentNotes, destPassword);
+                prompt.body = await CryptoService.encrypt(currentBody, destPassword);
+                prompt.notes = await CryptoService.encrypt(currentNotes, destPassword);
             } else {
-                 prompt.body = currentBody;
-                 prompt.notes = currentNotes;
+                prompt.body = currentBody;
+                prompt.notes = currentNotes;
             }
             prompt.folderId = newFolderId;
         }
@@ -2166,7 +2305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideModal(UI.folderSettingsModal); // Hide first to allow other modals
 
         if(folder.isLocked) { // Unlock
-            const password = await ModalService.password(`Enter password to unlock "${folder.name}":`);
+            const password = await ModalService.password(`Enter password to unlock "${folder.name}"`);
             if(!password) return;
             const check = await CryptoService.decrypt(folder.passwordCheck, password);
             if(check !== String(folder.id)) {
@@ -2183,12 +2322,12 @@ document.addEventListener('DOMContentLoaded', () => {
             await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
             await DB.put(DB.STORES.FOLDERS, folder);
         } else { // Lock
-            const password = await ModalService.password(`Set a password for "${folder.name}":`);
+            const password = await ModalService.password(`Set a password for "${folder.name}"`);
             if(!password) return;
             folder.isLocked = true;
             folder.passwordCheck = await CryptoService.encrypt(String(folder.id), password);
             const promptsToUpdate = state.prompts.filter(p => p.folderId === folder.id);
-             for(const p of promptsToUpdate) {
+            for(const p of promptsToUpdate) {
                 p.body = await CryptoService.encrypt(p.body, password);
                 p.notes = await CryptoService.encrypt(p.notes, password);
             };
