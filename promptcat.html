@@ -250,6 +250,8 @@
         #prompt-list li.active .prompt-list-tag, #prompt-list li.selected .prompt-list-tag { background-color: var(--primary-hover); color: white; }
 
         .prompt-list-title { font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .prompt-match-context { font-size: 0.85em; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -4px; margin-bottom: 8px; }
+        .prompt-match-context mark, .prompt-list-title mark { color: var(--primary-accent); background: none; font-weight: 600; padding: 0; }
         
         .prompt-list-tags { display: flex; flex-wrap: wrap; gap: 5px; }
         .prompt-list-tag { background-color: var(--bg-surface); color: var(--text-secondary); padding: 3px 8px; font-size: 0.75em; border-radius: 10px; font-weight: 500; transition: background-color 0.2s ease; }
@@ -1404,11 +1406,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function getFilteredAndSortedPrompts() {
-        let list = [...state.prompts];
+    function findMatchingLine(text, query) {
+        const lines = text.split('\n');
+        for (const line of lines) {
+            if (line.toLowerCase().includes(query)) {
+                return line.trim();
+            }
+        }
+        return ''; // Should not happen if called correctly
+    }
+
+    function getSearchQuery() {
         const desktopQuery = UI.search.value.trim().toLowerCase();
         const mobileQuery = UI.mobileSearchInput.value.trim().toLowerCase();
-        const query = window.innerWidth <= 768 ? mobileQuery : desktopQuery;
+        return window.innerWidth <= 768 ? mobileQuery : desktopQuery;
+    }
+
+    function getFilteredAndSortedPrompts() {
+        let list = [...state.prompts];
+        const query = getSearchQuery();
+
         if (query) {
             list = list.filter(p => {
                 const folder = state.folders.find(f => f.id === p.folderId);
@@ -1428,10 +1445,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                return [p.title, searchableBody, searchableNotes, ...(p.tags || [])]
-                    .join(' ')
-                    .toLowerCase()
-                    .includes(query);
+                const titleMatch = (p.title || '').toLowerCase().includes(query);
+                const bodyMatch = searchableBody.toLowerCase().includes(query);
+                const notesMatch = searchableNotes.toLowerCase().includes(query);
+                const tagMatch = (p.tags || []).join(' ').toLowerCase().includes(query);
+
+                if (titleMatch || bodyMatch || notesMatch || tagMatch) {
+                    p.matchContext = ''; // Reset context
+                    if (bodyMatch) {
+                        p.matchContext = findMatchingLine(searchableBody, query);
+                    } else if (notesMatch) {
+                        p.matchContext = findMatchingLine(searchableNotes, query);
+                    }
+                    return true;
+                }
+                return false;
             });
             if (state.view.type !== 'search') { state.view = {type: 'search'}; renderSidebarNav(); }
         } else if (state.view.type === 'tag') {
@@ -1466,9 +1494,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const isLocked = (folder && folder.isLocked) || prompt.isLocked;
             const lockIcon = isLocked ? `<svg class="lock-icon"><use href="#icon-lock"></use></svg>` : '';
 
+            const query = getSearchQuery();
+            let titleHTML = prompt.title || 'Untitled Prompt';
+            let contextHTML = '';
+
+            if (query && prompt.matchContext) {
+                const regex = new RegExp(`(${query})`, 'gi');
+                titleHTML = titleHTML.replace(regex, '<mark>$1</mark>');
+                contextHTML = `<div class="prompt-match-context">${prompt.matchContext.replace(regex, '<mark>$1</mark>')}</div>`;
+            }
+
             li.innerHTML = `
                 <div class="prompt-info">
-                    <span class="prompt-list-title">${prompt.title || 'Untitled Prompt'}</span>
+                    <span class="prompt-list-title">${titleHTML}</span>
+                    ${contextHTML}
                     <div class="prompt-list-tags">${(prompt.tags || []).map(tag => `<span class="prompt-list-tag" data-tag="${tag}">${tag}</span>`).join('')}</div>
                 </div>
                 <div class="prompt-actions">
