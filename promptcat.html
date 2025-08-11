@@ -696,6 +696,15 @@
             }
         }
         
+        #prompt-list li.dragging {
+            opacity: 0.5;
+            background: var(--bg-deep-space);
+        }
+        .sidebar-nav-list li.drag-over {
+            background-color: var(--primary-hover);
+            color: white;
+        }
+        
         .button-emoji { font-size: 1.2em; display: none; }
 
         @media (max-width: 420px) {
@@ -1550,6 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promptsToRender.forEach(prompt => {
             const li = document.createElement('li');
             li.dataset.id = prompt.id;
+            li.setAttribute('draggable', 'true');
             li.classList.toggle('active', prompt.id === state.currentPromptId && !state.isSelectMode);
             li.classList.toggle('selected', state.isSelectMode && state.selectedPromptIds.has(prompt.id));
 
@@ -1871,8 +1881,86 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.movePasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('confirm-move-btn').click(); });
         UI.renameFolderInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') UI.saveRenameBtn.click(); });
         document.getElementById('generic-modal-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('generic-modal-confirm-btn').click(); });
+    
+        // Drag and Drop
+        UI.promptList.addEventListener('dragstart', handleDragStart);
+        UI.primaryNavList.addEventListener('dragover', handleDragOver);
+        UI.primaryNavList.addEventListener('dragleave', handleDragLeave);
+        UI.primaryNavList.addEventListener('drop', handleDrop);
+        UI.folderList.addEventListener('dragover', handleDragOver);
+        UI.folderList.addEventListener('dragleave', handleDragLeave);
+        UI.folderList.addEventListener('drop', handleDrop);
+        document.body.addEventListener('dragend', handleDragEnd);
     }
     
+    function handleDragStart(e) {
+        const li = e.target.closest('li');
+        if (!li) return;
+        
+        const promptId = li.dataset.id;
+        const prompt = state.prompts.find(p => p.id == promptId);
+        if (!prompt) return;
+
+        // Prevent dragging locked prompts
+        const folder = state.folders.find(f => f.id === prompt.folderId);
+        if (prompt.isLocked || (folder && folder.isLocked)) {
+            e.preventDefault();
+            return;
+        }
+
+        e.dataTransfer.setData('text/plain', promptId);
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => {
+            li.classList.add('dragging');
+        }, 0);
+    }
+
+    function handleDragEnd(e) {
+        const draggingLi = UI.promptList.querySelector('li.dragging');
+        if (draggingLi) {
+            draggingLi.classList.remove('dragging');
+        }
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        const li = e.target.closest('li');
+        if (li && li.dataset.type === 'folder') {
+            li.classList.add('drag-over');
+        }
+    }
+
+    function handleDragLeave(e) {
+        const li = e.target.closest('li');
+        if (li && li.dataset.type === 'folder') {
+            li.classList.remove('drag-over');
+        }
+    }
+
+    async function handleDrop(e) {
+        e.preventDefault();
+        const li = e.target.closest('li');
+        if (!li) return;
+
+        li.classList.remove('drag-over');
+
+        const targetId = li.dataset.id;
+        if (targetId === 'favorites' || targetId === 'locked') {
+            return; // Cannot drop into these special views
+        }
+
+        const promptId = Number(e.dataTransfer.getData('text/plain'));
+        const folderId = targetId === 'all' ? null : Number(targetId);
+
+        const prompt = state.prompts.find(p => p.id === promptId);
+        if (prompt) {
+            prompt.folderId = folderId;
+            prompt.dateModified = Date.now();
+            await DB.put(DB.STORES.PROMPTS, prompt);
+            updateUI();
+        }
+    }
+
     function handlePopState(event) {
         if (window.innerWidth > 768) return;
         const isDetailsOpen = UI.app.classList.contains('details-visible-mobile');
