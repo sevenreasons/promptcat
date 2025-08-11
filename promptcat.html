@@ -1693,6 +1693,13 @@ document.addEventListener('DOMContentLoaded', () => {
             hideModal(UI.settingsModal);
             setTimeout(() => showModal(UI.resetDataModal), 350);
         });
+
+        // Enter key to click OK
+        UI.newFolderName.addEventListener('keydown', (e) => { if (e.key === 'Enter') UI.addFolderBtn.click(); });
+        UI.newTagName.addEventListener('keydown', (e) => { if (e.key === 'Enter') UI.addTagBtn.click(); });
+        UI.movePasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('confirm-move-btn').click(); });
+        UI.renameFolderInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') UI.saveRenameBtn.click(); });
+        document.getElementById('generic-modal-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('generic-modal-confirm-btn').click(); });
     }
     
     function handlePopState(event) {
