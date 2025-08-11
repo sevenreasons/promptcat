@@ -649,7 +649,20 @@
             }
 
             .prompt-list-controls { flex-wrap: wrap; }
-            .prompt-list-controls.select-mode-active #sort-by { display: none; }
+            .prompt-list-controls.select-mode-active #sort-by {
+            max-width: 0;
+            opacity: 0;
+            transform: scaleX(0);
+            border: 0;
+            padding: 0;
+        }
+        #sort-by {
+            transition: all 0.3s ease;
+            max-width: 120px;
+            opacity: 1;
+            transform-origin: right;
+            transform: scaleX(1);
+        }
             
             #prompt-list {
                 padding-bottom: 80px; /* Space for FABs */
