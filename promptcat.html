@@ -699,6 +699,7 @@
                     <div id="bulk-action-bar">
                         <button id="bulk-move-btn"><span class="button-text">Move</span><span class="button-emoji">📁</span></button>
                         <button id="bulk-delete-btn"><span class="button-text">Delete</span><span class="button-emoji">🗑️</span></button>
+                        <button id="bulk-export-btn"><span class="button-text">Export</span><span class="button-emoji">📤</span></button>
                     </div>
                     <select id="sort-by">
                         <option value="dateCreated_desc">Newest</option>
@@ -829,12 +830,14 @@
         <div class="modal-content">
             <h3 style="margin-bottom: 20px;">Settings</h3>
             <div class="modal-actions" style="flex-direction: column; gap: 10px; align-items: stretch;">
-                <button id="import-btn-modal" class="io-button" style="justify-content: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Import Data
-                </button>
-                <button id="export-btn-modal" class="io-button" style="justify-content: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export Data
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="import-btn-modal" class="io-button" style="justify-content: center; flex: 1;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Import
+                    </button>
+                    <button id="export-btn-modal" class="io-button" style="justify-content: center; flex: 1;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export
+                    </button>
+                </div>
                 <button id="reset-data-btn-modal" class="io-button" style="border-color: var(--red-hover); color: var(--text-secondary);">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Reset All Data
                 </button>
@@ -855,6 +858,7 @@
             <div class="modal-actions" style="justify-content: space-between;">
                 <button id="save-rename-btn" class="action-btn">Save Name</button>
                 <button id="toggle-lock-folder-btn" class="action-btn">Lock Folder</button>
+                <button id="export-folder-btn" class="action-btn">Export</button>
             </div>
             <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
             <div>
@@ -1130,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bulkActionBar: document.getElementById('bulk-action-bar'),
         bulkMoveBtn: document.getElementById('bulk-move-btn'),
         bulkDeleteBtn: document.getElementById('bulk-delete-btn'),
+        bulkExportBtn: document.getElementById('bulk-export-btn'),
         importFileInput: document.getElementById('import-file-input'),
         backToTopBtn: document.getElementById('back-to-top-btn'),
         mobileSearchBtn: document.getElementById('mobile-search-btn'),
@@ -1668,6 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.selectAllBtn.addEventListener('click', handleSelectAll);
         UI.bulkDeleteBtn.addEventListener('click', handleBulkDelete);
         UI.bulkMoveBtn.addEventListener('click', handleBulkMove);
+        UI.bulkExportBtn.addEventListener('click', handleBulkExport);
         UI.importFileInput.addEventListener('change', handleImport);
         UI.backToTopBtn.addEventListener('click', () => UI.promptList.scrollTo({ top: 0, behavior: 'smooth' }));
         UI.promptList.addEventListener('scroll', () => UI.backToTopBtn.classList.toggle('visible', UI.promptList.scrollTop > 300));
@@ -1688,6 +1694,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.saveRenameBtn.addEventListener('click', handleRenameFolder);
         UI.toggleLockFolderBtn.addEventListener('click', handleToggleFolderLock);
         UI.deleteFolderFromSettingsBtn.addEventListener('click', handleDeleteFolderTrigger);
+        document.getElementById('export-folder-btn').addEventListener('click', handleExportSingleFolder);
         UI.cancelFolderSettingsBtn.addEventListener('click', () => hideModal(UI.folderSettingsModal));
         UI.folderSettingsModal.addEventListener('click', (e) => { if(e.target === UI.folderSettingsModal) hideModal(UI.folderSettingsModal); });
         document.getElementById('confirm-delete-folder-move-prompts').addEventListener('click', () => { hideModal(UI.deleteFolderModal); handleDeleteFolderMove(); });
@@ -1710,6 +1717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.importFileInput.click();
         });
         UI.exportBtnModal.addEventListener('click', handleExport);
+        
         UI.resetDataBtnModal.addEventListener('click', () => {
             hideModal(UI.settingsModal);
             setTimeout(() => showModal(UI.resetDataModal), 350);
@@ -2225,23 +2233,91 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
     
+    
+
+    async function handleExportSingleFolder() {
+        const folderId = state.folderToEditId;
+        if (!folderId) return;
+
+        const folder = state.folders.find(f => f.id === folderId);
+        if (!folder) return;
+
+        const promptsInFolder = state.prompts.filter(p => p.folderId === folderId);
+
+        const dataToExport = {
+            folders: [folder],
+            prompts: promptsInFolder
+        };
+
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `promptcat_folder_${folder.name}_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    async function handleBulkExport() {
+        if (state.selectedPromptIds.size === 0) {
+            ModalService.alert("No prompts selected to export.", "Export Empty");
+            return;
+        }
+        const promptsToExport = state.prompts.filter(p => state.selectedPromptIds.has(p.id));
+        const dataToExport = {
+            prompts: promptsToExport
+        };
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `promptcat_prompts_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
     function handleImport(event) {
         const file = event.target.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = async e => {
             try {
                 const data = JSON.parse(e.target.result);
-                if (data && Array.isArray(data.prompts) && Array.isArray(data.folders)) {
-                    const confirmed = await ModalService.confirm('This will overwrite all current data. This action cannot be undone.', { title: 'Confirm Import', confirmBtnText: 'Overwrite', danger: true });
+                if (data && (data.prompts || data.folders)) {
+                    const isPartial = (data.prompts && !data.folders) || (!data.prompts && data.folders) || (data.prompts && data.folders && data.globalTags === undefined);
+                    let confirmed = true;
+                    if (!isPartial) {
+                        confirmed = await ModalService.confirm('This will overwrite all current data. This action cannot be undone.', { title: 'Confirm Import', confirmBtnText: 'Overwrite', danger: true });
+                    } else {
+                        confirmed = await ModalService.confirm('This will add data from the selected file. Existing data will be kept.', { title: 'Confirm Partial Import', confirmBtnText: 'Append' });
+                    }
+
                     if (confirmed) {
-                        await DB.clear(DB.STORES.PROMPTS);
-                        await DB.clear(DB.STORES.FOLDERS);
-                        await DB.clear(DB.STORES.TAGS);
+                        if (!isPartial) {
+                            await DB.clear(DB.STORES.PROMPTS);
+                            await DB.clear(DB.STORES.FOLDERS);
+                            await DB.clear(DB.STORES.TAGS);
+                        }
+
+                        if (data.folders) {
+                            const existingFolders = await DB.getAll(DB.STORES.FOLDERS);
+                            const existingFolderIds = new Set(existingFolders.map(f => f.id));
+                            const newFolders = data.folders.filter(f => !existingFolderIds.has(f.id));
+                            await DB.bulkPut(DB.STORES.FOLDERS, newFolders);
+                        }
+
+                        if (data.prompts) {
+                            const existingPrompts = await DB.getAll(DB.STORES.PROMPTS);
+                            const existingPromptIds = new Set(existingPrompts.map(p => p.id));
+                            const newPrompts = data.prompts.filter(p => !existingPromptIds.has(p.id));
+                            await DB.bulkPut(DB.STORES.PROMPTS, newPrompts);
+                        }
                         
-                        await DB.bulkPut(DB.STORES.PROMPTS, data.prompts);
-                        await DB.bulkPut(DB.STORES.FOLDERS, data.folders);
-                        const tagsToStore = (data.globalTags || []).map(tag => ({ id: tag }));
-                        await DB.bulkPut(DB.STORES.TAGS, tagsToStore);
+                        if (data.globalTags) {
+                            const existingTags = await DB.getAll(DB.STORES.TAGS);
+                            const existingTagIds = new Set(existingTags.map(t => t.id));
+                            const newTags = data.globalTags.filter(t => !existingTagIds.has(t)).map(tag => ({ id: tag }));
+                            await DB.bulkPut(DB.STORES.TAGS, newTags);
+                        }
 
                         state.currentPromptId = null; state.isCreatingNew = false; state.view = { type: 'folder', id: 'all' };
                         await loadData();
