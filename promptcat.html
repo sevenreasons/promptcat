@@ -185,12 +185,12 @@
             overflow: hidden;
         }
         #bulk-action-bar.visible {
-            max-width: 200px;
+            max-width: 240px;
             opacity: 1;
             transform: scaleX(1);
         }
-        #bulk-move-btn, #bulk-delete-btn { color: white; }
-        #bulk-move-btn { background-color: var(--primary-accent); }
+        #bulk-move-btn, #bulk-export-btn, #bulk-delete-btn { color: white; }
+        #bulk-move-btn, #bulk-export-btn { background-color: var(--primary-accent); }
         #bulk-delete-btn { background-color: var(--red-accent); }
         .prompt-list-controls.select-mode-active #sort-by {
             max-width: 0;
@@ -205,6 +205,34 @@
             opacity: 1;
             transform-origin: right;
             transform: scaleX(1);
+        }
+
+        #select-mode-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        #select-mode-btn .select-text,
+        #select-mode-btn .cancel-text {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #select-mode-btn .cancel-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .prompt-list-controls.select-mode-active #select-mode-btn .select-text {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        .prompt-list-controls.select-mode-active #select-mode-btn .cancel-text {
+            opacity: 1;
+            transform: translate(-50%, -50%);
         }
 
         #prompt-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; height: 100%; position: relative; }
@@ -620,9 +648,9 @@
         
         .button-emoji { font-size: 1.2em; display: none; }
         @media (max-width: 420px) {
-            #bulk-move-btn .button-text, #bulk-delete-btn .button-text { display: none; }
-            #bulk-move-btn .button-emoji, #bulk-delete-btn .button-emoji { display: inline; }
-            #bulk-move-btn, #bulk-delete-btn { width: 40px; justify-content: center; padding: 0 5px; }
+            #bulk-move-btn .button-text, #bulk-delete-btn .button-text, #bulk-export-btn .button-text { display: none; }
+            #bulk-move-btn .button-emoji, #bulk-delete-btn .button-emoji, #bulk-export-btn .button-emoji { display: inline; }
+            #bulk-move-btn, #bulk-delete-btn, #bulk-export-btn { width: 40px; justify-content: center; padding: 0 5px; }
         }
     </style>
 </head>
@@ -692,14 +720,14 @@
             </div>
             <div class="prompt-list-controls">
                 <div class="controls-left">
-                    <button id="select-mode-btn">Select</button>
+                    <button id="select-mode-btn"><span class="select-text">Select</span><span class="cancel-text">Cancel</span></button>
                     <button id="select-all-btn">Select All</button>
                 </div>
                 <div class="controls-right">
                     <div id="bulk-action-bar">
                         <button id="bulk-move-btn"><span class="button-text">Move</span><span class="button-emoji">📁</span></button>
-                        <button id="bulk-delete-btn"><span class="button-text">Delete</span><span class="button-emoji">🗑️</span></button>
                         <button id="bulk-export-btn"><span class="button-text">Export</span><span class="button-emoji">📤</span></button>
+                        <button id="bulk-delete-btn"><span class="button-text">Delete</span><span class="button-emoji">🗑️</span></button>
                     </div>
                     <select id="sort-by">
                         <option value="dateCreated_desc">Newest</option>
@@ -1586,7 +1614,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateBulkActionUI() {
-        UI.selectModeBtn.textContent = state.isSelectMode ? 'Cancel' : 'Select';
         UI.selectAllBtn.classList.toggle('visible', state.isSelectMode);
         UI.bulkActionBar.classList.toggle('visible', state.isSelectMode && state.selectedPromptIds.size > 0);
     }
