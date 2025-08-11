@@ -16,19 +16,22 @@ Whether you're a writer, developer, or AI enthusiast, promptcat provides a clean
 
 *   **Advanced Encryption**: For an extra layer of security, you can password-protect individual prompts or entire folders. The content (body and notes) is encrypted using the strong AES-GCM standard from the Web Crypto API. Passwords are never stored and are required for each session, ensuring only you can access your sensitive data.
 
-*   **Responsive & Mobile-First UI**: The interface is designed to be beautiful and functional on any device. The mobile experience is top-notch, with floating action buttons and a layout that adapts perfectly to smaller screens.
+*   **Responsive & Mobile-First UI**: The interface is designed to be beautiful and functional on any device. The mobile experience feels native with a morphing Floating Action Button (FAB), intuitive back-button navigation, and a dedicated search interface.
 
 *   **Powerful Organization**:
-    *   **Folders**: Group your prompts into folders for easy categorization. You can also rename folders and lock them with a password.
-    *   **Tags**: Add multiple tags to any prompt for flexible, cross-folder organization.
+    *   **Folders**: Group your prompts into folders. A settings menu (visible on hover) allows you to easily **Rename**, **Lock/Unlock**, **Export**, or **Delete** any folder.
+    *   **Advanced Tag Management**: Add multiple tags for flexible organization. A dedicated manager lets you **globally rename or delete tags**, automatically updating them across all associated prompts.
     *   **Favorites**: Mark your most-used prompts for quick access.
 
 *   **Robust Data Management**:
-    *   **Import/Export**: From the **Settings** modal, you can easily back up all your data to a JSON file or import it to another browser or device. You are always in control.
-    *   **Bulk Actions**: Select multiple prompts at once to move or delete them in a single action, saving you time.
+    *   **Flexible Import/Export**: You are always in control. Easily back up your entire database or import it to another device. You can also export just a single folder or a selection of multiple prompts.
+    *   **Bulk Actions**: Select multiple prompts at once to move, delete, or export them in a single action, saving you time.
 
 *   **Efficient Workflow**:
+    *   **Drag & Drop**: Instantly move a prompt into a new folder by simply dragging it from the list and dropping it onto the folder in the sidebar.
     *   **Powerful Search**: Instantly find any prompt by searching its title, body, notes, or tags. The search even works on decrypted content during a session.
+    *   **Sort & Find**: Sort your prompt list by creation date or title, and use the "Back to Top" button for long lists.
+    *   **Resizable Layout**: Adjust the view by dragging the divider between the prompt list and the editor.
     *   **Quick Copy**: A convenient one-click button copies the prompt's body to your clipboard.
     *   **Character Counter**: Keep track of your prompt's length with a real-time character counter.
     *   **Fullscreen Editor**: Expand the prompt or notes fields into a distraction-free fullscreen editor for focused writing.
