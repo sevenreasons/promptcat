@@ -1604,6 +1604,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }, animationDuration);
     }
 
+    function getPromptDetailsState() {
+        return {
+            title: UI.promptTitle.value,
+            body: UI.promptBody.value,
+            notes: UI.promptNotes.value,
+            folderId: UI.promptFolder.value,
+            tags: [...state.currentTags],
+            isLocked: UI.promptLockSwitch.checked
+        };
+    }
+
+    function setPromptDetailsState(details) {
+        UI.promptTitle.value = details.title;
+        UI.promptBody.value = details.body;
+        UI.promptNotes.value = details.notes;
+        UI.promptFolder.value = details.folderId;
+        UI.promptLockSwitch.checked = details.isLocked;
+        loadTags(details.tags);
+        updateCharCounter();
+    }
+
     function attachEventListeners() {
         UI.newPromptBtn.addEventListener('click', () => openPromptDetailsView(true));
         UI.mobileNewPromptFab.addEventListener('click', () => {
@@ -2360,48 +2381,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handlePromptLockToggle(e) {
         const isChecked = e.target.checked;
-        const prompt = state.isCreatingNew ? {} : state.prompts.find(p => p.id === state.currentPromptId);
-        if(!prompt) {
-             e.target.checked = !isChecked; // revert
+        const currentState = getPromptDetailsState();
+
+        if (state.isCreatingNew) {
+            if (isChecked) {
+                const password = await ModalService.password('Set a password for this new prompt:');
+                if (password) {
+                    state.newPromptLockInfo = { password };
+                } else {
+                    e.target.checked = false;
+                    currentState.isLocked = false;
+                }
+            } else {
+                state.newPromptLockInfo = null;
+            }
+            setPromptDetailsState(currentState);
             return;
         }
 
-        if(isChecked) { // Lock prompt
+        const prompt = state.prompts.find(p => p.id === state.currentPromptId);
+        if (!prompt) return;
+
+        if (isChecked) { // Locking
             const password = await ModalService.password('Set a password for this prompt:');
-            if(!password) {
-                e.target.checked = false; // revert
-                return;
-            }
-            if (state.isCreatingNew) {
-                state.newPromptLockInfo = { password };
-            } else {
+            if (password) {
                 prompt.isLocked = true;
-                prompt.passwordCheck = await CryptoService.encrypt(String(prompt.id), password);
                 prompt.body = await CryptoService.encrypt(UI.promptBody.value, password);
                 prompt.notes = await CryptoService.encrypt(UI.promptNotes.value, password);
+                prompt.passwordCheck = await CryptoService.encrypt(String(prompt.id), password);
                 state.sessionPasswords[`prompt-${prompt.id}`] = password;
                 await DB.put(DB.STORES.PROMPTS, prompt);
-                await renderPromptDetails(true);
-            }
-        } else { // Unlock prompt
-            if (state.isCreatingNew) {
-                state.newPromptLockInfo = null;
             } else {
-                const password = await ModalService.password('Enter password to unlock this prompt:');
-                if(!password) { e.target.checked = true; return; }
+                e.target.checked = false;
+            }
+        } else { // Unlocking
+            const password = await ModalService.password('Enter password to unlock:');
+            if (password) {
                 const check = await CryptoService.decrypt(prompt.passwordCheck, password);
-                if(check !== String(prompt.id)) {
-                    e.target.checked = true; // revert
+                if (check === String(prompt.id)) {
+                    prompt.isLocked = false;
+                    prompt.body = await CryptoService.decrypt(prompt.body, password);
+                    prompt.notes = await CryptoService.decrypt(prompt.notes, password);
+                    delete prompt.passwordCheck;
+                    state.sessionPasswords[`prompt-${prompt.id}`] = password; // Keep password for session
+                    await DB.put(DB.STORES.PROMPTS, prompt);
+                    renderPromptDetails(true); // Re-render with decrypted content
+                } else {
                     await ModalService.alert("Incorrect password.");
-                    return;
+                    e.target.checked = true;
                 }
-                prompt.isLocked = false;
-                prompt.passwordCheck = null;
-                prompt.body = await CryptoService.decrypt(prompt.body, password);
-                prompt.notes = await CryptoService.decrypt(prompt.notes, password);
-                delete state.sessionPasswords[`prompt-${prompt.id}`];
-                await DB.put(DB.STORES.PROMPTS, prompt);
-                await renderPromptDetails(true);
+            } else {
+                e.target.checked = true;
             }
         }
         updateUI();
