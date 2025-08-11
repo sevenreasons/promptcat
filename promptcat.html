@@ -81,7 +81,7 @@
         .folder-meta, .nav-item-meta{ margin-left: auto; display: flex; align-items: center; gap: 8px;}
         .folder-settings-btn{ display: none; padding: 2px; border-radius: 4px; cursor: pointer; background: none; border: none; color: var(--text-secondary); align-items: center; justify-content: center;}
         .folder-settings-btn:hover { color: var(--text-primary); }
-        .lock-icon{ color: var(--text-secondary); opacity: 0.4; width: 16px; height: 16px;} li
+        .lock-icon{ color: var(--text-secondary); opacity: 0.4; width: 16px; height: 16px; transition: opacity 0.2s, color 0.2s ease;} li
         .active .lock-icon{ color: white; opacity: 0.7;}
 
         @media (hover: hover) {
@@ -281,6 +281,13 @@
         
         .quick-copy-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); opacity: 0.3; padding: 5px; border-radius: 5px; line-height: 0; transition: opacity 0.2s, color 0.2s ease; }
         .quick-copy-btn:hover { opacity: 0.7; }
+        #prompt-list li.active .quick-copy-btn, #prompt-list li.selected .quick-copy-btn {
+            opacity: 0.8;
+            color: white;
+        }
+        #prompt-list li.active .quick-copy-btn:hover, #prompt-list li.selected .quick-copy-btn:hover {
+            opacity: 1;
+        }
         .quick-copy-btn.copied { color: var(--primary-accent); opacity: 1; }
         .quick-copy-btn svg { width: 18px; height: 18px; }
 
@@ -289,7 +296,18 @@
             transition: opacity 0.2s, color 0.2s ease; flex-shrink: 0; padding: 4px;
         }
         .favorite-toggle:hover { opacity: 0.7; }
+        #prompt-list li.active .favorite-toggle, #prompt-list li.selected .favorite-toggle {
+            opacity: 0.4;
+            color: white;
+        }
+        #prompt-list li.active .favorite-toggle:hover, #prompt-list li.selected .favorite-toggle:hover {
+            opacity: 1;
+        }
         .favorite-toggle.active { opacity: 1; color: var(--primary-accent); }
+        #prompt-list li.active .favorite-toggle.active, #prompt-list li.selected .favorite-toggle.active {
+            color: white;
+            opacity: 1;
+        }
         .favorite-toggle svg { width: 20px; height: 20px; display: block; }
         
         #back-to-top-btn {
