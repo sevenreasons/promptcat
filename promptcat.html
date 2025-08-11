@@ -2305,7 +2305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             folder.name = newName;
             await DB.put(DB.STORES.FOLDERS, folder);
             updateUI();
-            UI.renameFolderInput.value = '';
+            hideModal(UI.folderSettingsModal);
         }
     }
 
