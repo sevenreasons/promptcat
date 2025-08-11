@@ -712,6 +712,50 @@
             #bulk-move-btn .button-emoji, #bulk-delete-btn .button-emoji, #bulk-export-btn .button-emoji { display: inline; }
             #bulk-move-btn, #bulk-delete-btn, #bulk-export-btn { width: 40px; justify-content: center; padding: 0 5px; }
         }
+
+        /* Tag Management Modal Styles */
+        #manage-tags-list .tag-manage-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+        #manage-tags-list .tag-manage-item:hover {
+            background-color: var(--bg-surface);
+        }
+        #manage-tags-list .tag-name-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #manage-tags-list .tag-manage-item .tag-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--primary-accent);
+        }
+        #manage-tags-list .tag-manage-item .tag-action-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+        }
+        #manage-tags-list .tag-manage-item .tag-action-btn:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        #manage-tags-list .tag-manage-item .tag-action-btn.danger:hover {
+            background-color: var(--red-accent);
+            border-color: var(--red-accent);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -750,7 +794,7 @@
             <ul id="folder-list" class="sidebar-nav-list"></ul>
 
             <div class="sidebar-heading">
-                <span>Tags</span>
+                <span id="manage-tags-btn" style="cursor: pointer;">Tags</span>
                 <button class="sidebar-action-btn" id="new-tag-toggle-btn" title="New Tag"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
             </div>
             <div id="new-tag-container" class="inline-form-container">
@@ -962,6 +1006,18 @@
             </div>
             <div class="modal-actions" style="margin-top: 20px;">
                 <button id="cancel-folder-settings-btn" class="io-button" style="width: 100%">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="manage-tags-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>Manage Tags</h3>
+            <div id="manage-tags-list" style="max-height: 40vh; overflow-y: auto; margin: 20px 0;">
+                <!-- Tag items will be injected here -->
+            </div>
+            <div class="modal-actions">
+                <button id="close-manage-tags-btn" class="io-button" style="width: 100%">Close</button>
             </div>
         </div>
     </div>
@@ -1263,6 +1319,10 @@ document.addEventListener('DOMContentLoaded', () => {
         exportBtnModal: document.getElementById('export-btn-modal'),
         resetDataBtnModal: document.getElementById('reset-data-btn-modal'),
         closeSettingsModalBtn: document.getElementById('close-settings-modal-btn'),
+        manageTagsBtn: document.getElementById('manage-tags-btn'),
+        manageTagsModal: document.getElementById('manage-tags-modal'),
+        manageTagsList: document.getElementById('manage-tags-list'),
+        closeManageTagsBtn: document.getElementById('close-manage-tags-btn'),
     };
 
     const ModalService = {
@@ -1875,6 +1935,13 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => showModal(UI.resetDataModal), 350);
         });
 
+        // Tag Management Modal
+        UI.manageTagsBtn.addEventListener('click', openManageTagsModal);
+        UI.closeManageTagsBtn.addEventListener('click', () => hideModal(UI.manageTagsModal));
+        UI.manageTagsModal.addEventListener('click', (e) => { if(e.target === UI.manageTagsModal) hideModal(UI.manageTagsModal); });
+        UI.manageTagsList.addEventListener('click', handleTagActionClick);
+
+
         // Enter key to click OK
         UI.newFolderName.addEventListener('keydown', (e) => { if (e.key === 'Enter') UI.addFolderBtn.click(); });
         UI.newTagName.addEventListener('keydown', (e) => { if (e.key === 'Enter') UI.addTagBtn.click(); });
@@ -1959,6 +2026,145 @@ document.addEventListener('DOMContentLoaded', () => {
             await DB.put(DB.STORES.PROMPTS, prompt);
             updateUI();
         }
+    }
+
+    function openManageTagsModal() {
+        const allTags = [...new Set([...state.prompts.flatMap(p => p.tags || []), ...state.globalTags])].sort();
+        UI.manageTagsList.innerHTML = '';
+        if (allTags.length === 0) {
+            UI.manageTagsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No tags found.</p>';
+        } else {
+            allTags.forEach(tag => {
+                const promptCount = state.prompts.filter(p => (p.tags || []).includes(tag)).length;
+                const item = document.createElement('div');
+                item.className = 'tag-manage-item';
+                item.dataset.tag = tag;
+                item.innerHTML = `
+                    <div class="tag-name-container">
+                        <span class="tag-color-dot"></span>
+                        <span>${tag} (${promptCount})</span>
+                    </div>
+                    <div class="tag-actions">
+                        <button class="tag-action-btn rename" data-action="rename">Rename</button>
+                        <button class="tag-action-btn danger delete" data-action="delete">Delete</button>
+                    </div>
+                `;
+                UI.manageTagsList.appendChild(item);
+            });
+        }
+        showModal(UI.manageTagsModal);
+    }
+
+    async function handleTagActionClick(e) {
+        const button = e.target.closest('.tag-action-btn');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const tagItem = button.closest('.tag-manage-item');
+        const oldTagName = tagItem.dataset.tag;
+
+        if (action === 'rename') {
+            const newTagName = await ModalService.prompt('Enter the new name for this tag:', {
+                title: 'Rename Tag',
+                defaultValue: oldTagName,
+                confirmBtnText: 'Rename'
+            });
+
+            if (newTagName && newTagName.trim() !== '' && newTagName !== oldTagName) {
+                await handleRenameTag(oldTagName, newTagName.trim());
+                openManageTagsModal(); // Refresh the modal
+            }
+        } else if (action === 'delete') {
+            const confirmed = await ModalService.confirm(`Are you sure you want to delete the tag "${oldTagName}"? It will be removed from all associated prompts.`, {
+                title: 'Delete Tag',
+                confirmBtnText: 'Delete',
+                danger: true
+            });
+
+            if (confirmed) {
+                await handleDeleteTag(oldTagName);
+                openManageTagsModal(); // Refresh the modal
+            }
+        }
+    }
+
+    async function handleRenameTag(oldName, newName) {
+        // Update global tags
+        const globalTagIndex = state.globalTags.indexOf(oldName);
+        if (globalTagIndex > -1) {
+            state.globalTags.splice(globalTagIndex, 1, newName);
+        }
+        if (!state.globalTags.includes(newName)) {
+            state.globalTags.push(newName);
+        }
+        await DB.remove(DB.STORES.TAGS, oldName);
+        await DB.put(DB.STORES.TAGS, { id: newName });
+
+        // Update prompts
+        const promptsToUpdate = [];
+        state.prompts.forEach(p => {
+            if (p.tags && p.tags.includes(oldName)) {
+                p.tags = p.tags.map(t => t === oldName ? newName : t);
+                // Ensure no duplicates if newName already existed
+                p.tags = [...new Set(p.tags)];
+                promptsToUpdate.push(p);
+            }
+        });
+
+        if (promptsToUpdate.length > 0) {
+            await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
+        }
+
+        // Update current view if it was the renamed tag
+        if (state.view.type === 'tag' && state.view.id === oldName) {
+            state.view.id = newName;
+        }
+        
+        // Update details view if open
+        if (state.currentPromptId || state.isCreatingNew) {
+            const detailsState = getPromptDetailsState();
+            if (detailsState.tags.includes(oldName)) {
+                detailsState.tags = detailsState.tags.map(t => t === oldName ? newName : t);
+                setPromptDetailsState(detailsState);
+            }
+        }
+        
+        updateUI();
+    }
+
+    async function handleDeleteTag(tagName) {
+        // Remove from global tags
+        state.globalTags = state.globalTags.filter(t => t !== tagName);
+        await DB.remove(DB.STORES.TAGS, tagName);
+
+        // Remove from prompts
+        const promptsToUpdate = [];
+        state.prompts.forEach(p => {
+            if (p.tags && p.tags.includes(tagName)) {
+                p.tags = p.tags.filter(t => t !== tagName);
+                promptsToUpdate.push(p);
+            }
+        });
+
+        if (promptsToUpdate.length > 0) {
+            await DB.bulkPut(DB.STORES.PROMPTS, promptsToUpdate);
+        }
+
+        // If the current view is the deleted tag, switch to 'all'
+        if (state.view.type === 'tag' && state.view.id === tagName) {
+            state.view = { type: 'folder', id: 'all' };
+        }
+        
+        // Update details view if open
+        if (state.currentPromptId || state.isCreatingNew) {
+            const detailsState = getPromptDetailsState();
+            if (detailsState.tags.includes(tagName)) {
+                detailsState.tags = detailsState.tags.filter(t => t !== tagName);
+                setPromptDetailsState(detailsState);
+            }
+        }
+
+        updateUI();
     }
 
     function handlePopState(event) {
