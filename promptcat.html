@@ -950,7 +950,7 @@
 
     <div id="reset-data-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="modal-title-js">Reset All Data</h3>
+            <h3 class="modal-title-js">Reset</h3>
             <p class="modal-message-js">Are you sure you want to reset all data? This will permanently delete all prompts, folders, and tags. This action cannot be undone.</p>
             <div class="modal-actions">
                 <button id="cancel-reset-btn" class="io-button modal-cancel-js">Cancel</button>
@@ -972,7 +972,7 @@
                     </button>
                 </div>
                 <button id="reset-data-btn-modal" class="io-button" style="border-color: var(--red-hover); color: var(--text-secondary);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Reset All Data
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Reset
                 </button>
             </div>
             <div class="modal-actions" style="margin-top: 10px; justify-content: center;">
@@ -1235,7 +1235,40 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        return { open, getAll, put, bulkPut, remove, bulkRemove, clear, STORES };
+        function getStorageUsage() {
+            return new Promise(async (resolve, reject) => {
+                if (!db) {
+                    return resolve(0);
+                }
+
+                let totalSize = 0;
+                const transaction = db.transaction(db.objectStoreNames, 'readonly');
+                const stores = Array.from(db.objectStoreNames);
+
+                let processedStores = 0;
+
+                stores.forEach(storeName => {
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+
+                    request.onsuccess = event => {
+                        const items = event.target.result;
+                        const size = new TextEncoder().encode(JSON.stringify(items)).length;
+                        totalSize += size;
+                    };
+                });
+
+                transaction.oncomplete = () => {
+                    resolve(totalSize);
+                };
+
+                transaction.onerror = event => {
+                    reject('Error calculating storage usage');
+                };
+            });
+        }
+
+        return { open, getAll, put, bulkPut, remove, bulkRemove, clear, getStorageUsage, STORES };
     })();
 
     const UI = {
@@ -1324,6 +1357,31 @@ document.addEventListener('DOMContentLoaded', () => {
         manageTagsList: document.getElementById('manage-tags-list'),
         closeManageTagsBtn: document.getElementById('close-manage-tags-btn'),
     };
+
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    async function updateStorageUsage() {
+        try {
+            const usage = await DB.getStorageUsage();
+            const formattedUsage = formatBytes(usage);
+            const button = UI.resetDataBtnModal;
+            
+            const textNode = Array.from(button.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.includes('Reset'));
+            if (textNode) {
+                textNode.textContent = ` Reset (${formattedUsage})`;
+            }
+
+        } catch (error) {
+            console.error('Failed to update storage usage:', error);
+        }
+    }
 
     const ModalService = {
         show: (config) => {
@@ -1921,7 +1979,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('popstate', handlePopState);
         
         // Settings Modal Listeners
-        UI.settingsBtn.addEventListener('click', () => showModal(UI.settingsModal));
+        UI.settingsBtn.addEventListener('click', () => {
+            showModal(UI.settingsModal);
+            updateStorageUsage();
+        });
         UI.closeSettingsModalBtn.addEventListener('click', () => hideModal(UI.settingsModal));
         UI.settingsModal.addEventListener('click', (e) => { if(e.target === UI.settingsModal) hideModal(UI.settingsModal); });
         UI.importBtnModal.addEventListener('click', () => {
