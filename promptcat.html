@@ -120,7 +120,7 @@
         #reset-data-btn-modal:hover { background-color: var(--red-accent) !important; color: white !important; }
 
         /* --- Main Content --- */
-        #main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+        #main-content { flex-grow: 1; display: flex; overflow: hidden; }
         #sidebar-toggle, #mobile-new-prompt-fab, #mobile-search-btn {
             display: none; position: absolute; z-index: 1001;
             background: var(--bg-surface); border: 1px solid var(--border-color);
@@ -153,7 +153,18 @@
             pointer-events: none; 
         }
 
-        #prompt-list-container { width: 35%; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #resizer {
+            flex: 0 0 3px;
+            cursor: col-resize;
+            background-color: var(--border-color);
+            z-index: 10;
+        }
+
+        #resizer:hover {
+            background-color: var(--primary-accent);
+        }
+
+        #prompt-list-container { width: 35%; min-width: 220px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .prompt-list-controls {
             padding: 10px 15px; display: flex; gap: 10px; align-items: center;
             border-bottom: 1px solid var(--border-color); flex-shrink: 0;
@@ -785,6 +796,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
             </button>
         </div>
+        <div id="resizer"></div>
         <div id="prompt-details-container">
             <div id="no-prompt-selected">
                 <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
@@ -1338,6 +1350,25 @@ document.addEventListener('DOMContentLoaded', () => {
         password: (message, config = {}) => ModalService.show({ type: 'password', ...config, message, title: config.title || 'Password Required' }),
     };
 
+    function initResize() {
+        const resizer = document.getElementById('resizer');
+        const left = document.getElementById('prompt-list-container');
+        const right = document.getElementById('prompt-details-container');
+
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+            });
+        });
+
+        function handleMouseMove(e) {
+            const newLeftWidth = e.clientX - left.getBoundingClientRect().left;
+            left.style.width = newLeftWidth + 'px';
+        }
+    }
+
     let state = {
         prompts: [],
         folders: [],
@@ -1364,6 +1395,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await DB.open();
         await loadData(); 
         attachEventListeners(); 
+        initResize();
         updateUI();
         history.replaceState({ appState: 'base' }, '');
     }
