@@ -897,8 +897,8 @@
                 <input type="text" id="rename-folder-input" class="inline-form-input">
             </div>
             <div class="modal-actions" style="justify-content: space-between;">
-                <button id="save-rename-btn" class="action-btn">Save Name</button>
-                <button id="toggle-lock-folder-btn" class="action-btn">Lock Folder</button>
+                <button id="save-rename-btn" class="action-btn">Save</button>
+                <button id="toggle-lock-folder-btn" class="action-btn">Lock</button>
                 <button id="export-folder-btn" class="action-btn">Export</button>
             </div>
             <div style="border-top: 1px solid var(--border-color); margin: 20px 0;"></div>
@@ -1897,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!folder) return;
         UI.folderSettingsTitle.textContent = `Settings for "${folder.name}"`;
         UI.renameFolderInput.value = folder.name;
-        UI.toggleLockFolderBtn.textContent = folder.isLocked ? 'Unlock Folder' : 'Lock Folder';
+        UI.toggleLockFolderBtn.textContent = folder.isLocked ? 'Unlock' : 'Lock';
         showModal(UI.folderSettingsModal);
     }
 
