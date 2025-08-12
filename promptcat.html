@@ -681,13 +681,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const DB = (function() {
         const DB_NAME = 'PromptCatDB';
-        const DB_VERSION = 1;
+        const DB_VERSION = 2;
         let db;
 
         const STORES = {
             PROMPTS: 'prompts',
             FOLDERS: 'folders',
             TAGS: 'globalTags',
+            SETTINGS: 'settings',
         };
 
         function open() {
@@ -709,7 +710,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!db.objectStoreNames.contains(STORES.TAGS)) {
                         db.createObjectStore(STORES.TAGS, { keyPath: 'id' });
                     }
+                    if (!db.objectStoreNames.contains(STORES.SETTINGS)) {
+                        db.createObjectStore(STORES.SETTINGS, { keyPath: 'key' });
+                    }
                 };
+            });
+        }
+
+        function get(storeName, key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.get(key);
+                request.onsuccess = event => resolve(event.target.result);
+                request.onerror = event => reject(`Error getting item ${key} from ${storeName}`);
             });
         }
 
@@ -808,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        return { open, getAll, put, bulkPut, remove, bulkRemove, clear, getStorageUsage, STORES };
+        return { open, getAll, put, bulkPut, remove, bulkRemove, clear, getStorageUsage, get, STORES };
     })();
 
     const UI = {
@@ -1020,23 +1034,46 @@ document.addEventListener('DOMContentLoaded', () => {
         password: (message, config = {}) => ModalService.show({ type: 'password', ...config, message, title: config.title || 'Password Required' }),
     };
 
-    function initResize() {
+    async function initResize() {
         const resizer = document.getElementById('resizer');
         const left = document.getElementById('prompt-list-container');
         const right = document.getElementById('prompt-details-container');
+        const minWidth = 260; // Corresponds to min-width in CSS
+        const defaultWidth = 42; // Corresponds to width in CSS (%)
+
+        // Load saved width
+        const savedWidth = await DB.get(DB.STORES.SETTINGS, 'panelWidth');
+        if (savedWidth) {
+            left.style.width = savedWidth.value;
+        }
+
+        const handleMouseMove = (e) => {
+            const containerWidth = UI.mainContent.offsetWidth;
+            let newLeftWidth = e.clientX - left.getBoundingClientRect().left;
+            
+            // Constraints
+            if (newLeftWidth < minWidth) newLeftWidth = minWidth;
+            if (newLeftWidth > containerWidth - minWidth) newLeftWidth = containerWidth - minWidth;
+
+            left.style.width = newLeftWidth + 'px';
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            DB.put(DB.STORES.SETTINGS, { key: 'panelWidth', value: left.style.width });
+        };
 
         resizer.addEventListener('mousedown', (e) => {
             e.preventDefault();
             document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-            });
+            document.addEventListener('mouseup', handleMouseUp);
         });
 
-        function handleMouseMove(e) {
-            const newLeftWidth = e.clientX - left.getBoundingClientRect().left;
-            left.style.width = newLeftWidth + 'px';
-        }
+        resizer.addEventListener('dblclick', () => {
+            left.style.width = `${defaultWidth}%`;
+            DB.put(DB.STORES.SETTINGS, { key: 'panelWidth', value: `${defaultWidth}%` });
+        });
     }
 
     let state = {
