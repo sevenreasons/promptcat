@@ -1037,21 +1037,33 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initResize() {
         const resizer = document.getElementById('resizer');
         const left = document.getElementById('prompt-list-container');
+        
+        if (window.innerWidth <= 768) {
+            left.style.width = ''; // Reset width for mobile view
+            resizer.style.display = 'none';
+            return;
+        }
+        
+        resizer.style.display = 'flex';
+
         const right = document.getElementById('prompt-details-container');
         const minWidth = 260; // Corresponds to min-width in CSS
-        const defaultWidth = 42; // Corresponds to width in CSS (%)
+        const defaultWidth = '42%'; // Corresponds to width in CSS (%)
 
         // Load saved width
         const savedWidth = await DB.get(DB.STORES.SETTINGS, 'panelWidth');
         if (savedWidth) {
             left.style.width = savedWidth.value;
+        } else {
+            left.style.width = defaultWidth;
         }
+
+        if (resizeListenersAttached) return;
 
         const handleMouseMove = (e) => {
             const containerWidth = UI.mainContent.offsetWidth;
             let newLeftWidth = e.clientX - left.getBoundingClientRect().left;
             
-            // Constraints
             if (newLeftWidth < minWidth) newLeftWidth = minWidth;
             if (newLeftWidth > containerWidth - minWidth) newLeftWidth = containerWidth - minWidth;
 
@@ -1071,9 +1083,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         resizer.addEventListener('dblclick', () => {
-            left.style.width = `${defaultWidth}%`;
-            DB.put(DB.STORES.SETTINGS, { key: 'panelWidth', value: `${defaultWidth}%` });
+            left.style.width = defaultWidth;
+            DB.put(DB.STORES.SETTINGS, { key: 'panelWidth', value: defaultWidth });
         });
+
+        resizeListenersAttached = true;
     }
 
     let state = {
@@ -1097,6 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         decryptedCache: {}, // { 12345: { body: '...', notes: '...' } }
         newPromptLockInfo: null, // { password: '...' }
     };
+    let resizeListenersAttached = false;
 
     async function init() { 
         await DB.open();
@@ -1619,6 +1634,8 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.folderList.addEventListener('dragleave', handleDragLeave);
         UI.folderList.addEventListener('drop', handleDrop);
         document.body.addEventListener('dragend', handleDragEnd);
+
+        window.addEventListener('resize', initResize);
     }
     
     function handleDragStart(e) {
