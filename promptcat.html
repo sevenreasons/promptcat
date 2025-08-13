@@ -187,8 +187,7 @@
         .custom-select-container {position: relative;}
         .custom-select-value {padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; font-size: 1em; cursor: pointer; user-select: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0a0b5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 16px 12px; padding-right: 2.5rem;}
         .custom-select-container.open .custom-select-value {border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-color: var(--border-color);}
-        .custom-select-options {
-            display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 20;}
+        .custom-select-options {display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 20;}
         .custom-select-container.open .custom-select-options {display: block;}
         .custom-select-option {padding: 10px 12px; cursor: pointer; transition: background-color 0.2s ease; display: flex; align-items: center; gap: 8px;}
         .custom-select-option:hover, .custom-select-option.active {background-color: var(--primary-accent); color: white;}
@@ -1314,14 +1313,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (show) {
             UI.noPromptSelected.style.display = 'none';
             UI.promptDetails.style.display = 'flex';
-            renderFolderDropdown();
 
             if(state.isCreatingNew) {
                 UI.promptTitle.value = '';
                 UI.promptBody.value = '';
                 UI.promptNotes.value = '';
                 UI.promptFolder.value = (state.view.type === 'folder' && state.view.id !== 'all' && state.view.id !== 'favorites') ? state.view.id : 'all';
-                renderFolderDropdown();
                 UI.promptLockSwitch.checked = !!state.newPromptLockInfo;
                 UI.promptLockSwitch.disabled = false;
                 loadTags([]);
@@ -1347,6 +1344,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadTags(prompt.tags || []); 
                 }
             }
+            // Render folder dropdown after setting the folder value
+            renderFolderDropdown();
             updateCharCounter();
         } else {
             UI.noPromptSelected.style.display = 'flex';
