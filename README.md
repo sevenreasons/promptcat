@@ -1,4 +1,4 @@
-<img width="1280" height="640" alt="promptcat" src="https://github.com/user-attachments/assets/e19b2cdf-79cb-4d16-8330-a6b5f0a5f770" />
+<img width="1280" height="640" alt="promptcat" src="https://github.com/user-attachments/assets/ec879fb2-af98-4dc1-a60a-a7f490f89a0d" />
 
 # promptcat 😼
 
