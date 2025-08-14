@@ -64,4 +64,31 @@ Since all data is stored in IndexedDB, it is tied to the specific browser and de
   <tr>
     <td align="center"><img src="https://github.com/user-attachments/assets/31eed986-15e5-42a5-8592-0a5da70eff94" alt="promptcat_4"/></td>
     <td align="center"><img src="https://github.com/user-attachments/assets/f863d608-f118-4909-89ea-52f5233f2727" alt="promptcat_5"/></td>
-    <td align="center"><img src="https://github.com/user-attachments/assets/f2d30365-034e-4814-a317-74da
+    <td align="center"><img src="https://github.com/user-attachments/assets/f2d30365-034e-4814-a317-74da1a00536a" alt="promptcat_6"/></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="3"><img src="https://github.com/user-attachments/assets/627aac34-96bd-45f7-b2bb-288aa2c1dfe2" alt="promptcat_8"/></td>
+  </tr>
+</table>
+
+## Screenshots (Mobile) 📱
+
+<table align="center">
+  <tr>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/7e10dd1c-6a82-4c44-9d31-197dfbcd8104" alt="promptcat-mobile_8"/></td>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/193a1bb4-022d-431c-bf85-c4e99dac87a5" alt="promptcat-mobile_7"/></td>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/c7c4d211-d6df-4571-801f-8016041b3c6a" alt="promptcat-mobile_6"/></td>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/63352c3a-1f75-4102-97a3-7aa77f44efe9" alt="promptcat-mobile_5"/></td>
+  </tr>
+  <tr>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/5f8525f1-f501-4a9c-975b-952e7a3f0acd" alt="promptcat-mobile_4"/></td>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/d3f465b7-0ad3-43bc-ab7c-781cb51163e3" alt="promptcat-mobile_3"/></td>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/5a954b60-d4d2-4b2e-9bf5-5ad9c6679ca2" alt="promptcat-mobile_2"/></td>
+    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/716bc2ee-f8cf-4bce-b400-7de3665182ee" alt="promptcat-mobile_1"/></td>
+  </tr>
+</table>
+
+## Demo 🎥
+<p align="center">
+  <video src='https://github.com/user-attachments/assets/f84970fc-b3d4-4b36-9e1c-19b26ac9f114' width='720'/>
+</p>
