@@ -2629,6 +2629,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handlePromptLockToggle(e) {
         const isChecked = e.target.checked;
         const currentState = getPromptDetailsState();
+        const scrollPosition = UI.promptList.scrollTop;
 
         if (state.isCreatingNew) {
             if (isChecked) {
@@ -2682,6 +2683,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         updateUI();
+        UI.promptList.scrollTop = scrollPosition;
     }
 
     init();
