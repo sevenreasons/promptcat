@@ -480,8 +480,8 @@
             <h3 class="modal-title-js">Delete Folder</h3>
             <p class="modal-message-js">What would you like to do with the prompts inside this folder?</p>
             <div class="modal-actions" style="flex-direction: column; gap: 15px; align-items: stretch;">
-                <button id="confirm-delete-folder-move-prompts" class="action-btn">Delete Folder &amp; Move Prompts</button>
-                <button id="confirm-delete-folder-and-prompts" class="action-btn">Delete Folder &amp; All Prompts</button>
+                <button id="confirm-delete-folder-move-prompts" class="action-btn">Delete Folder & Move Prompts</button>
+                <button id="confirm-delete-folder-and-prompts" class="action-btn">Delete Folder & All Prompts</button>
                 <button id="cancel-delete-folder-btn" class="io-button modal-cancel-js">Cancel</button>
             </div>
         </div>
@@ -1168,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="folder-meta">
                     ${lockIcon}
                     <button class="folder-settings-btn" data-folder-id="${folder.id}" title="Folder Settings">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     </button>
                     <span class="item-count">${folderCount}</span>
                 </div>`;
@@ -1190,14 +1190,60 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function findMatchingLine(text, query) {
+    function createMatchSnippet(text, query, maxLength = 70) {
+        if (!text || !query) return '';
+        
         const lines = text.split('\n');
+        let bestMatch = { line: '', index: -1 };
+
+        // Find the first line that contains the query
         for (const line of lines) {
-            if (line.toLowerCase().includes(query)) {
-                return line.trim();
+            const lowerLine = line.toLowerCase();
+            const index = lowerLine.indexOf(query.toLowerCase());
+            if (index > -1) {
+                bestMatch = { line, index };
+                break;
             }
         }
-        return ''; // Should not happen if called correctly
+
+        if (bestMatch.index === -1) {
+            return ''; // No match found
+        }
+
+        const { line, index } = bestMatch;
+        const queryLength = query.length;
+        
+        const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${safeQuery})`, 'gi');
+        
+        // If the whole line is short enough, just highlight and return it
+        if (line.length <= maxLength) {
+            return line.replace(regex, '<mark>$1</mark>');
+        }
+
+        // Otherwise, create a snippet centered around the match
+        const halfLength = Math.floor((maxLength - queryLength) / 2);
+        let startIndex = index - halfLength;
+        let endIndex = index + queryLength + halfLength;
+
+        let prefix = '...';
+        let suffix = '...';
+
+        if (startIndex <= 0) {
+            startIndex = 0;
+            prefix = '';
+        }
+
+        if (endIndex >= line.length) {
+            endIndex = line.length;
+            suffix = '';
+        }
+
+        // Extract the snippet and highlight the match within it
+        let snippet = line.substring(startIndex, endIndex);
+        snippet = snippet.replace(regex, '<mark>$1</mark>');
+
+        return prefix + snippet + suffix;
     }
 
     function getSearchQuery() {
@@ -1237,9 +1283,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (titleMatch || bodyMatch || notesMatch || tagMatch) {
                     p.matchContext = ''; // Reset context
                     if (bodyMatch) {
-                        p.matchContext = findMatchingLine(searchableBody, query);
+                        p.matchContext = createMatchSnippet(searchableBody, query);
                     } else if (notesMatch) {
-                        p.matchContext = findMatchingLine(searchableNotes, query);
+                        p.matchContext = createMatchSnippet(searchableNotes, query);
                     }
                     return true;
                 }
@@ -1283,10 +1329,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let titleHTML = prompt.title || 'Untitled Prompt';
             let contextHTML = '';
 
-            if (query && prompt.matchContext) {
-                const regex = new RegExp(`(${query})`, 'gi');
+            if (query) {
+                const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${escapedQuery})`, 'gi');
+                
                 titleHTML = titleHTML.replace(regex, '<mark>$1</mark>');
-                contextHTML = `<div class="prompt-match-context">${prompt.matchContext.replace(regex, '<mark>$1</mark>')}</div>`;
+                
+                if (prompt.matchContext) {
+                    contextHTML = `<div class="prompt-match-context">${prompt.matchContext}</div>`;
+                }
             }
 
             li.innerHTML = `
@@ -2353,7 +2404,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.isSelectMode = false;
         updateUI();
     }
-    
     
 
     async function handleExportSingleFolder() {
