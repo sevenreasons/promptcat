@@ -1389,7 +1389,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isLocked = isLockedByFolder || isLockedIndividually;
                     
                     const key = isLockedByFolder ? `folder-${folder.id}` : `prompt-${prompt.id}`;
-                    const password = temporaryPassword || state.sessionPasswords[key];
+                    let password = temporaryPassword || state.sessionPasswords[key];
+
+                    // If prompt is locked and we don't have a password, ask for it
+                    if (isLocked && !password) {
+                        const itemType = isLockedByFolder ? 'folder' : 'prompt';
+                        const item = isLockedByFolder ? folder : prompt;
+                        
+                        const result = await ModalService.password(`Enter password for ${itemType} "${item.name || item.title}"`, {
+                            validate: async (pwd) => {
+                                if (!pwd) return false;
+                                const check = await CryptoService.decrypt(item.passwordCheck, pwd);
+                                return check === String(item.id);
+                            }
+                        });
+
+                        if (result) {
+                            password = result.password;
+                            // Store password for session if user requested to remember
+                            if (result.remember) {
+                                state.sessionPasswords[key] = password;
+                            }
+                            
+                            // Cache decrypted content
+                            if (isLockedByFolder) {
+                                const promptsToCache = state.prompts.filter(p => p.folderId === folder.id);
+                                for (const p of promptsToCache) {
+                                    const body = await CryptoService.decrypt(p.body, password);
+                                    const notes = await CryptoService.decrypt(p.notes, password);
+                                    state.decryptedCache[p.id] = { body, notes };
+                                }
+                            } else { // Locked individually
+                                const body = await CryptoService.decrypt(prompt.body, password);
+                                const notes = await CryptoService.decrypt(prompt.notes, password);
+                                state.decryptedCache[prompt.id] = { body, notes };
+                            }
+                        } else {
+                            // If password was cancelled, close the prompt details view
+                            _internalCloseDetailsView();
+                            return;
+                        }
+                    }
 
                     UI.promptTitle.value = prompt.title;
                     UI.promptBody.value = isLocked ? await CryptoService.decrypt(prompt.body, password) : prompt.body;
@@ -1437,13 +1477,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
         if (window.innerWidth > 768) { UI.promptDetails.classList.add('closing'); }
         UI.app.classList.remove('details-visible-mobile');
-        setTimeout(() => {
+        setTimeout(async () => {
             if (window.innerWidth > 768) UI.promptDetails.classList.remove('closing');
             const currentActive = UI.promptList.querySelector(`li[data-id="${state.currentPromptId}"]`);
             if (currentActive) currentActive.classList.remove('active');
             state.isCreatingNew = false;
             state.currentPromptId = null;
             state.newPromptLockInfo = null; // Clear lock info for new prompts
+            
+            // Clear decrypted cache when closing prompt details
+            state.decryptedCache = {};
+            
             renderPromptDetails(false);
         }, animationDuration);
     }
@@ -2681,7 +2725,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 prompt.body = await CryptoService.encrypt(UI.promptBody.value, password);
                 prompt.notes = await CryptoService.encrypt(UI.promptNotes.value, password);
                 prompt.passwordCheck = await CryptoService.encrypt(String(prompt.id), password);
-                state.sessionPasswords[`prompt-${prompt.id}`] = password;
+                // Don't automatically store in session - only store if user chooses "remember"
                 await DB.put(DB.STORES.PROMPTS, prompt);
             } else {
                 e.target.checked = false;
@@ -2695,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     prompt.body = await CryptoService.decrypt(prompt.body, password);
                     prompt.notes = await CryptoService.decrypt(prompt.notes, password);
                     delete prompt.passwordCheck;
-                    state.sessionPasswords[`prompt-${prompt.id}`] = password; // Keep password for session
+                    // Don't automatically store in session - only store if user chooses "remember"
                     await DB.put(DB.STORES.PROMPTS, prompt);
                     renderPromptDetails(true); // Re-render with decrypted content
                 } else {
