@@ -2741,7 +2741,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     delete prompt.passwordCheck;
                     // Don't automatically store in session - only store if user chooses "remember"
                     await DB.put(DB.STORES.PROMPTS, prompt);
-                    renderPromptDetails(true); // Re-render with decrypted content
+                    // Update the UI with decrypted content
+                    UI.promptBody.value = await CryptoService.decrypt(prompt.body, password);
+                    UI.promptNotes.value = await CryptoService.decrypt(prompt.notes, password);
+                    updateCharCounter();
                 } else {
                     await ModalService.alert("Incorrect password.");
                     e.target.checked = true;
@@ -2750,7 +2753,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.target.checked = true;
             }
         }
-        updateUI();
+        // Only update the prompt list, not the entire UI
+        renderPrompts();
         UI.promptList.scrollTop = scrollPosition;
     }
 
