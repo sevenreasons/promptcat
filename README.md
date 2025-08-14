@@ -6,6 +6,16 @@
 
 # promptcat 😼
 
+<p align="center">
+  <a href="http://www.wtfpl.net/about/"><img src="https://img.shields.io/badge/License-WTFPL-brightgreen.svg" alt="License: WTFPL"></a>
+  <img src="https://img.shields.io/badge/Tech-HTML5-orange" alt="Tech: HTML5">
+  <img src="https://img.shields.io/badge/Tech-CSS3-blue" alt="Tech: CSS3">
+  <img src="https://img.shields.io/badge/Tech-Vanilla_JS-yellow" alt="Tech: Vanilla JS">
+  <img src="https://img.shields.io/badge/Dependencies-0-lightgrey" alt="Dependencies: 0">
+  <img src="https://img.shields.io/badge/Privacy-Fully_Local-red" alt="Privacy: Fully Local">
+  <img src="https://img.shields.io/badge/Distribution-Single_HTML_File-brightgreen" alt="Distribution: Single HTML File">
+</p>
+
 **promptcat** is a simple, powerful, and private prompt manager designed for simplicity and efficiency. It's a single HTML file with zero dependencies, making it incredibly easy to use and modify. Everything you create is stored locally in your browser's IndexedDB, ensuring your data remains completely private and secure.
 
 Whether you're a writer, developer, or AI enthusiast, promptcat provides a clean and organized space to manage your prompts, notes, and ideas without any setup, servers, or dependencies.
@@ -54,31 +64,4 @@ Since all data is stored in IndexedDB, it is tied to the specific browser and de
   <tr>
     <td align="center"><img src="https://github.com/user-attachments/assets/31eed986-15e5-42a5-8592-0a5da70eff94" alt="promptcat_4"/></td>
     <td align="center"><img src="https://github.com/user-attachments/assets/f863d608-f118-4909-89ea-52f5233f2727" alt="promptcat_5"/></td>
-    <td align="center"><img src="https://github.com/user-attachments/assets/f2d30365-034e-4814-a317-74da1a00536a" alt="promptcat_6"/></td>
-  </tr>
-  <tr>
-    <td align="center" colspan="3"><img src="https://github.com/user-attachments/assets/627aac34-96bd-45f7-b2bb-288aa2c1dfe2" alt="promptcat_8"/></td>
-  </tr>
-</table>
-
-## Screenshots (Mobile) 📱
-
-<table align="center">
-  <tr>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/7e10dd1c-6a82-4c44-9d31-197dfbcd8104" alt="promptcat-mobile_8"/></td>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/193a1bb4-022d-431c-bf85-c4e99dac87a5" alt="promptcat-mobile_7"/></td>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/c7c4d211-d6df-4571-801f-8016041b3c6a" alt="promptcat-mobile_6"/></td>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/63352c3a-1f75-4102-97a3-7aa77f44efe9" alt="promptcat-mobile_5"/></td>
-  </tr>
-  <tr>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/5f8525f1-f501-4a9c-975b-952e7a3f0acd" alt="promptcat-mobile_4"/></td>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/d3f465b7-0ad3-43bc-ab7c-781cb51163e3" alt="promptcat-mobile_3"/></td>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/5a954b60-d4d2-4b2e-9bf5-5ad9c6679ca2" alt="promptcat-mobile_2"/></td>
-    <td align="center"><img width="200" src="https://github.com/user-attachments/assets/716bc2ee-f8cf-4bce-b400-7de3665182ee" alt="promptcat-mobile_1"/></td>
-  </tr>
-</table>
-
-## Demo 🎥
-<p align="center">
-  <video src='https://github.com/user-attachments/assets/f84970fc-b3d4-4b36-9e1c-19b26ac9f114' width='720'/>
-</p>
+    <td align="center"><img src="https://github.com/user-attachments/assets/f2d30365-034e-4814-a317-74da
