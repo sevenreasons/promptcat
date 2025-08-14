@@ -10,6 +10,8 @@
 
 Whether you're a writer, developer, or AI enthusiast, promptcat provides a clean and organized space to manage your prompts, notes, and ideas without any setup, servers, or dependencies.
 
+**Live Demo**: https://sevenreasons.github.io/promptcat
+
 ## Key Features ✨
 
 *   **Simplicity First**: The entire application is a single HTML file. No builds, no installations. Just download the file and open it in your browser to get started.
