@@ -223,12 +223,19 @@
         #fullscreen-prompt-textarea { flex-grow: 1; resize: none; font-size: 1.1em; background: transparent; border: none; padding: 20px; }
         #fullscreen-prompt-modal .modal-actions { justify-content: flex-end; padding: 15px 20px; flex-shrink: 0; border-top: 1px solid var(--border-color); }
         #fullscreen-prompt-modal .modal-actions button { min-width: 120px; }
-        #manage-tags-list .tag-manage-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-radius: 6px; transition: background-color 0.2s ease; }
+        #manage-tags-list .tag-manage-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-radius: 6px; transition: all 0.2s ease; cursor: pointer; }
         #manage-tags-list .tag-manage-item:hover { background-color: var(--bg-surface); }
+        #manage-tags-list .tag-manage-item.selected { background-color: var(--primary-accent); }
+        #manage-tags-list .tag-manage-item.selected .tag-name-container span:last-child { color: white; font-weight: 500; }
         #manage-tags-list .tag-name-container { display: flex; align-items: center; gap: 8px; }
-        #manage-tags-list .tag-manage-item .tag-color-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--primary-accent); }
-        #manage-tags-list .tag-manage-item .tag-action-btn { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; padding: 5px 10px; border-radius: 5px; font-size: 0.85em; margin-left: 10px; transition: all 0.2s ease; }
+        #manage-tags-list .tag-manage-item .tag-color-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--primary-accent); transition: all 0.2s ease; }
+        #manage-tags-list .tag-manage-item.selected .tag-color-dot { background-color: white; }
+        #manage-tags-list .tag-manage-item .tag-actions { display: flex; gap: 5px; opacity: 0; transform: scale(0.8); transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none; }
+        #manage-tags-list .tag-manage-item.selected .tag-actions { opacity: 1; transform: scale(1); pointer-events: auto; }
+        #manage-tags-list .tag-manage-item .tag-action-btn { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; padding: 5px 10px; border-radius: 5px; font-size: 0.85em; transition: all 0.2s ease; }
+        #manage-tags-list .tag-manage-item.selected .tag-action-btn { border-color: rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.8); }
         #manage-tags-list .tag-manage-item .tag-action-btn:hover { background-color: var(--border-color); color: var(--text-primary); }
+        #manage-tags-list .tag-manage-item.selected .tag-action-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: white; }
         #manage-tags-list .tag-manage-item .tag-action-btn.danger:hover { background-color: var(--red-accent); border-color: var(--red-accent); color: white; }
 
         /* --- ANIMATIONS --- */
@@ -1657,6 +1664,23 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.closeManageTagsBtn.addEventListener('click', () => hideModal(UI.manageTagsModal));
         UI.manageTagsModal.addEventListener('click', (e) => { if(e.target === UI.manageTagsModal) hideModal(UI.manageTagsModal); });
         UI.manageTagsList.addEventListener('click', handleTagActionClick);
+        
+        // Tag selection in manage tags modal
+        UI.manageTagsList.addEventListener('click', (e) => {
+            const tagItem = e.target.closest('.tag-manage-item');
+            if (tagItem && !e.target.closest('.tag-action-btn')) {
+                // Toggle selected class on clicked item
+                const isSelected = tagItem.classList.contains('selected');
+                // Remove selected class from all items
+                UI.manageTagsList.querySelectorAll('.tag-manage-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                // Add selected class to clicked item if it wasn't already selected
+                if (!isSelected) {
+                    tagItem.classList.add('selected');
+                }
+            }
+        });
 
 
         // Enter key to click OK
